@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, PlusCircle, History, LogOut, Shield, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
