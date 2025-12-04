@@ -13,3 +13,6 @@ markdown
 python-jose[cryptography]
 argon2-cffi
 pydantic-settings
+email-validator
+beautifulsoup4
+pydantic
