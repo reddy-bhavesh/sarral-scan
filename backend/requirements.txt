@@ -10,3 +10,5 @@ requests
 asyncssh
 reportlab
 markdown
+python-jose[cryptography]
+argon2-cffi
