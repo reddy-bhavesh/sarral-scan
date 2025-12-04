@@ -12,3 +12,4 @@ reportlab
 markdown
 python-jose[cryptography]
 argon2-cffi
+pydantic-settings
