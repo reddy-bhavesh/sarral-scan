@@ -9,9 +9,9 @@ class GeminiAnalyzer:
     def __init__(self):
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            # Use a deterministic model, not flash
+            # Use gemini-1.5-flash as it is stable and widely available
             self.model = genai.GenerativeModel(
-                "gemini-2.0-flash",
+                "gemini-1.5-flash",
                 system_instruction=self._system_prompt()
             )
         else:
@@ -155,6 +155,7 @@ STRICT RULES:
         # ------------------------------
         # MODEL CALL + RETRY
         # ------------------------------
+        last_error = None
         for attempt in range(3):
             try:
                 response = await self.model.generate_content_async(
@@ -180,12 +181,13 @@ STRICT RULES:
                     return result
 
             except Exception as e:
+                last_error = str(e)
                 print(f"[Gemini Analyzer Warning] Attempt {attempt+1} failed: {e}", file=sys.stderr)
                 import asyncio
                 await asyncio.sleep(2)
 
         # If all retries fail:
         return {
-            "summary": "AI could not produce valid JSON.",
+            "summary": f"AI Analysis Failed. Error: {last_error}",
             "vulnerabilities": []
         }
