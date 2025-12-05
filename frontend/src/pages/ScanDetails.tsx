@@ -391,14 +391,7 @@ ${finding.Evidence || 'N/A'}
                                 const filename = scan.pdfPath.split(/[/\\]/).pop();
                                 const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
                                 const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-                                const finalUrl = `${cleanBaseUrl}/reports/${filename}`;
-                                console.log('Debug Download:', { 
-                                    rawPath: scan.pdfPath, 
-                                    filename, 
-                                    baseUrl, 
-                                    finalUrl 
-                                });
-                                window.open(finalUrl, '_blank');
+                                window.open(`${cleanBaseUrl}/reports/${filename}`, '_blank');
                             }}
                             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-lg border border-gray-200 dark:border-gray-700 transition-colors shadow-sm"
                         >

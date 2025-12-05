@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../api/axios';
 import { useNavigate, Link } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff, User, Building } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff, User, Building, Check } from 'lucide-react';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -18,8 +18,31 @@ const Register = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const [passwordRules, setPasswordRules] = useState({
+        length: false,
+        uppercase: false,
+        lowercase: false,
+        number: false,
+        special: false
+    });
+
+    const validatePassword = (pass: string) => {
+        setPasswordRules({
+            length: pass.length >= 8,
+            uppercase: /[A-Z]/.test(pass),
+            lowercase: /[a-z]/.test(pass),
+            number: /\d/.test(pass),
+            special: /[!@#$%^&*(),.?":{}|<>]/.test(pass)
+        });
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        
+        if (name === 'password') {
+            validatePassword(value);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -159,6 +182,30 @@ const Register = () => {
                                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </button>
                             </div>
+                            
+                            {/* Password Strength Checklist */}
+                            <div className="grid grid-cols-2 gap-2 mt-3 pl-1">
+                                <div className={`flex items-center gap-2 text-xs ${passwordRules.length ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {passwordRules.length ? <Check className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-current" />}
+                                    Min 8 chars
+                                </div>
+                                <div className={`flex items-center gap-2 text-xs ${passwordRules.uppercase ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {passwordRules.uppercase ? <Check className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-current" />}
+                                    Uppercase
+                                </div>
+                                <div className={`flex items-center gap-2 text-xs ${passwordRules.lowercase ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {passwordRules.lowercase ? <Check className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-current" />}
+                                    Lowercase
+                                </div>
+                                <div className={`flex items-center gap-2 text-xs ${passwordRules.number ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {passwordRules.number ? <Check className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-current" />}
+                                    Number
+                                </div>
+                                <div className={`flex items-center gap-2 text-xs ${passwordRules.special ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {passwordRules.special ? <Check className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-current" />}
+                                    Special Char
+                                </div>
+                            </div>
                         </div>
 
                         <div className="space-y-1.5">
@@ -204,7 +251,7 @@ const Register = () => {
 
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || !Object.values(passwordRules).every(Boolean)}
                             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-6"
                         >
                             {isLoading ? (
