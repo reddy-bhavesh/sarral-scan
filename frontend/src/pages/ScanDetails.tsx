@@ -98,12 +98,12 @@ ${finding.Evidence || 'N/A'}
 
         fetchScan();
         
-        // Poll for updates if scan is running
+        // Poll for updates if scan is running (Every 5 seconds as requested)
         const interval = setInterval(() => {
             if (scan && scan.status === 'Running') {
                 fetchScan();
             }
-        }, 1000);
+        }, 5000);
 
         return () => clearInterval(interval);
     }, [id, scan?.status]);
@@ -152,6 +152,7 @@ ${finding.Evidence || 'N/A'}
                 return [];
             }
         }) || [];
+        console.log(findings);
 
         // Sort by severity
         const severityOrder: { [key: string]: number } = {

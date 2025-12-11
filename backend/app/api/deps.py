@@ -29,3 +29,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Prisma = Dep
     if user is None:
         raise credentials_exception
     return user
+
+async def get_current_admin_user(current_user: UserResponse = Depends(get_current_user)) -> UserResponse:
+    if not current_user.isAdmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    return current_user

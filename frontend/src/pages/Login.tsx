@@ -24,9 +24,10 @@ const Login = () => {
             formData.append('password', password);
             const response = await api.post('/auth/login', formData);
             login(response.data.access_token, response.data.user);
+            console.log()
             navigate('/dashboard');
         } catch (err: any) {
-            setError('Invalid credentials. Please try again.');
+            setError(err.response?.data?.detail || 'Invalid credentials. Please try again.');
         } finally {
             setIsLoading(false);
         }

@@ -7,6 +7,7 @@ import {
     ArrowUpRight, ArrowDownRight, Eye, Clock 
 } from 'lucide-react';
 import api from '../api/axios';
+import { useSSE } from '../context/SSEContext';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -25,6 +26,7 @@ const itemVariants = {
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const { addEventListener, removeEventListener } = useSSE();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<any[]>([]);
     const [recentScans, setRecentScans] = useState<any[]>([]);
@@ -34,94 +36,29 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await api.get('/scans/');
-                const scans = response.data;
+                const response = await api.get('/scans/dashboard-stats');
+                const data = response.data;
+                console.log(data);
                 
-                // 1. Calculate Stats & Trends
-                const now = new Date();
-                const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-                const currentWeekScans = scans.filter((s: any) => new Date(s.date) >= oneWeekAgo);
-                const lastWeekScans = scans.filter((s: any) => {
-                    const d = new Date(s.date);
-                    return d >= twoWeeksAgo && d < oneWeekAgo;
-                });
-
-                const calculateTrend = (current: number, previous: number) => {
-                    if (previous === 0) return current > 0 ? 100 : 0;
-                    return Math.round(((current - previous) / previous) * 100);
-                };
-
-                const total = scans.length;
-                const running = scans.filter((s: any) => s.status === 'Running').length;
-                const completed = scans.filter((s: any) => s.status === 'Completed').length;
-                const failed = scans.filter((s: any) => s.status === 'Failed').length;
-
-                // Mocking trends slightly for visual if data is sparse, otherwise using real calc
-                const totalTrend = calculateTrend(currentWeekScans.length, lastWeekScans.length);
-                const completedTrend = calculateTrend(
-                    currentWeekScans.filter((s: any) => s.status === 'Completed').length,
-                    lastWeekScans.filter((s: any) => s.status === 'Completed').length
-                );
-                const failedTrend = calculateTrend(
-                    currentWeekScans.filter((s: any) => s.status === 'Failed').length,
-                    lastWeekScans.filter((s: any) => s.status === 'Failed').length
-                );
-
+                // 1. Stats from Backend
                 setStats([
-                    { label: 'Total Scans', value: total, trend: totalTrend, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                    { label: 'Running Scans', value: running, trend: 0, icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                    { label: 'Completed', value: completed, trend: completedTrend, icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-500/10' },
-                    { label: 'Failed', value: failed, trend: failedTrend, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
+                    { label: 'Total Scans', value: data.totalScans.value, trend: data.totalScans.trend, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { label: 'Running Scans', value: data.runningScans.value, trend: data.runningScans.trend, icon: Server, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                    { label: 'Completed', value: data.completedScans.value, trend: data.completedScans.trend, icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-500/10' },
+                    { label: 'Failed', value: data.failedScans.value, trend: data.failedScans.trend, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
                 ]);
 
-                // 2. Prepare Trend Chart Data (Last 7 Days)
-                const days = [];
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                    days.push(d.toISOString().split('T')[0]);
-                }
+                // 2. Trend Data from Backend
+                setTrendData(data.chartData);
 
-                const chartData = days.map(day => {
-                    const dayScans = scans.filter((s: any) => s.date.startsWith(day));
-                    return {
-                        date: new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                        total: dayScans.length,
-                        failed: dayScans.filter((s: any) => s.status === 'Failed').length,
-                        completed: dayScans.filter((s: any) => s.status === 'Completed').length
-                    };
-                });
-                setTrendData(chartData);
+                // 3. Vuln Dist from Backend
+                setVulnDist(data.vulnDist);
 
-                // 3. Calculate Vulnerability Distribution
-                const dist = { Critical: 0, High: 0, Medium: 0, Low: 0, Info: 0 };
-                scans.forEach((s: any) => {
-                    if (s.results) {
-                        s.results.forEach((r: any) => {
-                            if (r.gemini_summary) {
-                                try {
-                                    const parsed = JSON.parse(r.gemini_summary);
-                                    if (parsed.vulnerabilities) {
-                                        parsed.vulnerabilities.forEach((v: any) => {
-                                            const sev = v.Severity || 'Info';
-                                            if (dist[sev as keyof typeof dist] !== undefined) {
-                                                dist[sev as keyof typeof dist]++;
-                                            }
-                                        });
-                                    }
-                                } catch (e) {}
-                            }
-                        });
-                    }
-                });
-                setVulnDist(dist);
-
-                // 4. Recent Scans
-                const sortedScans = [...scans].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-                
-                // Enrich recent scans with finding counts
-                const enrichedScans = sortedScans.map((s: any) => {
+                // 4. Recent Scans from Backend
+                // Backend returns top 5 with results included, so we just need to count findings for display
+                // The backend doesn't pre-count finding types in the 'recentScans' list logic I wrote (it returns full scan objects).
+                // So we still need a lightweight map here to show badges in the table.
+                const enrichedScans = data.recentScans.map((s: any) => {
                     const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
                     if (s.results) {
                         s.results.forEach((r: any) => {
@@ -151,10 +88,19 @@ const Dashboard = () => {
             }
         };
 
+        // Initial fetch
         fetchData();
-        // Poll every 5s
-        const interval = setInterval(fetchData, 5000);
-        return () => clearInterval(interval);
+
+        const onScanUpdate = (data: any) => {
+            console.log("Dashboard received update:", data);
+            fetchData();
+        };
+
+        addEventListener("SCAN_UPDATE", onScanUpdate);
+
+        return () => {
+            removeEventListener("SCAN_UPDATE", onScanUpdate);
+        };
     }, []);
 
     // Helper for Line Chart

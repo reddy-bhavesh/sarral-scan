@@ -1,12 +1,12 @@
 generator client {
-  provider = "prisma-client-py"
+  provider = "c:/Users/bhave/AppData/Roaming/Python/Python314/Scripts/prisma-client-py"
   interface = "asyncio"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
   engineType    = "binary"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -17,6 +17,8 @@ model User {
   fullName      String?
   organization  String?
   createdAt     DateTime @default(now())
+  isAdmin       Boolean  @default(false)
+  isActive      Boolean  @default(true)
   scans         Scan[]
 }
 

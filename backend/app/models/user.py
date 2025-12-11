@@ -5,7 +5,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    full_name: str | None = None
+    fullName: str | None = None
     organization: str | None = None
 
 class UserLogin(UserBase):
@@ -13,8 +13,10 @@ class UserLogin(UserBase):
 
 class UserResponse(UserBase):
     id: int
-    full_name: str | None = None
+    fullName: str | None = None
     organization: str | None = None
+    isAdmin: bool = False
+    isActive: bool = True
     
     class Config:
         from_attributes = True
@@ -23,3 +25,11 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+class UserUpdate(BaseModel):
+    fullName: str | None = None
+    organization: str | None = None
+
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str

@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from prisma import Prisma
 from app.api import auth, scans, system
+import logging
+import sys
+
+# Remove manual basicConfig to allow Uvicorn to handle logging
+logger = logging.getLogger(__name__)
 
 db = Prisma()
 
@@ -40,6 +45,11 @@ import os
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(scans.router, prefix="/scans", tags=["scans"])
 app.include_router(system.router, prefix="/system", tags=["system"])
+from app.api import users, admin
+app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
+from app.api import events
+app.include_router(events.router, prefix="/events", tags=["events"])
 
 # Ensure reports directory exists
 os.makedirs("reports", exist_ok=True)

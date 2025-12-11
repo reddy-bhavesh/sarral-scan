@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
 import { Search, Filter, Trash2, Eye, AlertTriangle, CheckCircle, Clock, Activity } from 'lucide-react';
 import api from '../api/axios';
+import { useSSE } from '../context/SSEContext';
 
 const History = () => {
     const navigate = useNavigate();
+    const { addEventListener, removeEventListener } = useSSE();
     const [scans, setScans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -15,6 +17,7 @@ const History = () => {
     const fetchScans = async () => {
         try {
             const response = await api.get('/scans/');
+            console.log(response.data);
             // Enrich scans with findings count
             const enrichedScans = response.data.map((s: any) => {
                 const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
@@ -47,6 +50,17 @@ const History = () => {
 
     useEffect(() => {
         fetchScans();
+
+        const onScanUpdate = (data: any) => {
+            console.log("History received update:", data);
+            fetchScans();
+        };
+
+        addEventListener("SCAN_UPDATE", onScanUpdate);
+
+        return () => {
+            removeEventListener("SCAN_UPDATE", onScanUpdate);
+        };
     }, []);
 
     const handleDelete = async (e: React.MouseEvent, scanId: number) => {
@@ -66,6 +80,7 @@ const History = () => {
         scan.target.toLowerCase().includes(searchTerm.toLowerCase()) ||
         scan.status.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    console.log(filteredScans);
 
     if (loading) return (
         <div className="flex items-center justify-center h-64">

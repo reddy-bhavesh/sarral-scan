@@ -1,25 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from prisma import Prisma
-from app.core.security import verify_password, get_password_hash, create_access_token
+from app.core.security import verify_password, get_password_hash, create_access_token, validate_password_strength
 from app.models.user import UserCreate, UserResponse, Token
 from app.api.deps import get_db
 
 router = APIRouter()
 
-import re
 
-def validate_password_strength(password: str):
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
-    if not re.search(r"[A-Z]", password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
-    if not re.search(r"[a-z]", password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
-    if not re.search(r"\d", password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one number")
-    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one special character")
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: Prisma = Depends(get_db)):
@@ -34,7 +22,7 @@ async def register(user: UserCreate, db: Prisma = Depends(get_db)):
         data={
             "email": user.email,
             "password_hash": hashed_password,
-            "fullName": user.full_name,
+            "fullName": user.fullName,
             "organization": user.organization
         }
     )
@@ -48,6 +36,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Prisma = D
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if not user.isActive:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated. Please contact your admin for activation.",
         )
     
     access_token = create_access_token(data={"sub": user.email})

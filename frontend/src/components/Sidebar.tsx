@@ -1,6 +1,6 @@
 
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, History, LogOut, Shield, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, History, LogOut, Shield, Sun, Moon, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -40,6 +40,22 @@ const Sidebar = () => {
                         <span className="font-medium">{item.label}</span>
                     </NavLink>
                 ))}
+                
+                {user?.isAdmin && (
+                    <NavLink
+                        to="/admin"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                                isActive
+                                    ? 'bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-500 border-r-2 border-blue-600 dark:border-blue-500'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
+                            }`
+                        }
+                    >
+                        <Shield className="w-5 h-5" />
+                        <span className="font-medium">Admin</span>
+                    </NavLink>
+                )}
             </nav>
 
             <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
@@ -54,21 +70,26 @@ const Sidebar = () => {
                     </span>
                 </button>
 
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
-                        {user?.full_name ? 
-                            user.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 
+                <NavLink 
+                    to="/profile"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group cursor-pointer"
+                >
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {user?.fullName ? 
+                            user.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 
                             user?.email?.slice(0, 2).toUpperCase() || 'US'}
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            {user?.full_name || user?.email?.split('@')[0] || 'User'}
+                    <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            {user?.fullName || user?.email?.split('@')[0] || 'User'}
                         </span>
                         {user?.organization && (
-                            <span className="text-xs text-gray-500">{user.organization}</span>
+                            <span className="text-xs text-gray-500 truncate">{user.organization}</span>
                         )}
                     </div>
-                </div>
+                    <User className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                </NavLink>
+
                 <button
                     onClick={logout}
                     className="flex items-center gap-3 px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-white hover:bg-red-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors w-full"

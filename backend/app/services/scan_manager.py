@@ -7,6 +7,9 @@ from app.models.scan import ScanCreate, ScanUpdate
 from app.services.tools import SSHClient
 from app.services.gemini_analyzer import GeminiAnalyzer
 from app.services.report_generator import ReportGenerator
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ScanManager:
     # Class variable to track active scans
@@ -52,8 +55,13 @@ class ScanManager:
             }
         )
         # Start scan in background
-        task = asyncio.create_task(self.run_scan(scan.id, sorted_phases, scan_data.target))
+        task = asyncio.create_task(self.run_scan(scan.id, sorted_phases, scan_data.target, user_id))
         ScanManager._active_scans[scan.id] = task
+        
+        # Emit 'Created' event immediately
+        from app.services.event_manager import event_manager
+        await event_manager.emit(user_id, "SCAN_UPDATE", {"status": "Created", "scanId": scan.id})
+        
         return scan
 
     async def setup_kali_environment(self, ssh_client: SSHClient):
@@ -78,12 +86,15 @@ class ScanManager:
         except Exception as e:
             print(f"Failed to setup Kali environment: {e}")
 
-    async def run_scan(self, scan_id: int, phases: list[str], target: str):
-        print(f"Starting scan {scan_id} for {target}")
+    async def run_scan(self, scan_id: int, phases: list[str], target: str, user_id: int):
+        logger.info(f"Starting scan {scan_id} for {target}")
+        from app.services.event_manager import event_manager
+        
         await self.db.scan.update(
             where={"id": scan_id},
             data={"status": "Running"}
         )
+        await event_manager.emit(user_id, "SCAN_UPDATE", {"status": "Running", "scanId": scan_id})
 
         scan_results = []
         
@@ -131,7 +142,7 @@ class ScanManager:
 
             # 2. Execute Tools
             for phase in phases:
-                print(f"Starting Phase: {phase}")
+                logger.info(f"Starting Phase: {phase}")
                 tools = TOOL_CONFIG.get(phase, [])
                 
                 for i, tool_config in enumerate(tools):
@@ -167,7 +178,7 @@ class ScanManager:
                     # Run command inside the temp directory
                     full_command = f"cd {scan_dir} && {command}"
                     
-                    print(f"Executing tool: {tool_name} with command: {full_command}")
+                    logger.info(f"Executing tool: {tool_name} with command: {full_command}")
 
                     # Check Input Requirements
                     input_type = tool_config.get("input_type")
@@ -408,7 +419,8 @@ class ScanManager:
                     "pdfPath": pdf_path
                 }
             )
-            print(f"Scan {scan_id} completed successfully. Report at {pdf_path}")
+            logger.info(f"Scan {scan_id} completed successfully. Report at {pdf_path}")
+            await event_manager.emit(user_id, "SCAN_UPDATE", {"status": "Completed", "scanId": scan_id})
 
         except asyncio.CancelledError:
             print(f"Scan {scan_id} was cancelled.")
@@ -418,10 +430,11 @@ class ScanManager:
                         where={"id": scan_id},
                         data={"status": "Stopped"}
                     )
+                    await event_manager.emit(user_id, "SCAN_UPDATE", {"status": "Stopped", "scanId": scan_id})
             except Exception as e:
                 print(f"Failed to update scan status during cancellation: {e}")
         except Exception as e:
-            print(f"Scan {scan_id} failed: {e}")
+            logger.error(f"Scan {scan_id} failed: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             try:
@@ -430,6 +443,7 @@ class ScanManager:
                         where={"id": scan_id},
                         data={"status": "Failed"}
                     )
+                    await event_manager.emit(user_id, "SCAN_UPDATE", {"status": "Failed", "scanId": scan_id})
             except:
                 pass
         finally:
