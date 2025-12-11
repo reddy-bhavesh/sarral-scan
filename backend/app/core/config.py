@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     KALI_KEY_PATH: Optional[str] = None
 
     # Google Gemini API
-    GEMINI_API_KEY: Optional[str] = "AIzaSyCrIMFiS1xQpVvXJ82sxE9nxjr4V6CQuc4"
+    GEMINI_API_KEY: Optional[str] = "API_KEY"
 
     class Config:
         env_file = ".env"
