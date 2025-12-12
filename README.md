@@ -86,7 +86,3 @@ This tool is intended for **authorized security testing and educational purposes
 ## 🤝 Contributing
 
 Contributions are welcome! Please fork the repository and submit a pull request.
-
-## 📄 License
-
-[MIT License](LICENSE)
