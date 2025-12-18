@@ -1,5 +1,5 @@
 generator client {
-  provider = "c:/Users/bhave/AppData/Roaming/Python/Python314/Scripts/prisma-client-py"
+  provider = "prisma-client-py"
   interface = "asyncio"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
   engineType    = "binary"
@@ -31,8 +31,14 @@ model Scan {
   date      DateTime     @default(now())
   userId    Int
   user      User         @relation(fields: [userId], references: [id])
-  pdfPath   String?
-  results   ScanResult[]
+  pdfPath        String?
+  duration_seconds Int      @default(0)
+  critical_count Int      @default(0)
+  high_count     Int      @default(0)
+  medium_count   Int      @default(0)
+  low_count      Int      @default(0)
+  info_count     Int      @default(0)
+  results        ScanResult[]
 }
 
 model ScanResult {
