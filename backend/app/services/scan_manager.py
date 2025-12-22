@@ -412,11 +412,41 @@ class ScanManager:
             self.report_generator.generate_report(scan, scan_results, pdf_path)
 
             # 5. Complete Scan
+            # Calculate stats
+            duration = int((datetime.now(timezone.utc) - scan.date.replace(tzinfo=timezone.utc)).total_seconds())
+            
+            critical_c = 0
+            high_c = 0
+            medium_c = 0
+            low_c = 0
+            info_c = 0
+
+            for res in scan_results:
+                if res.gemini_summary:
+                    try:
+                        summary_data = json.loads(res.gemini_summary)
+                        if "vulnerabilities" in summary_data:
+                            for v in summary_data["vulnerabilities"]:
+                                sev = v.get("Severity", "Info").lower()
+                                if sev == "critical": critical_c += 1
+                                elif sev == "high": high_c += 1
+                                elif sev == "medium": medium_c += 1
+                                elif sev == "low": low_c += 1
+                                else: info_c += 1
+                    except:
+                        pass
+
             await self.db.scan.update(
                 where={"id": scan_id},
                 data={
                     "status": "Completed",
-                    "pdfPath": pdf_path
+                    "pdfPath": pdf_path,
+                    "duration_seconds": duration,
+                    "critical_count": critical_c,
+                    "high_count": high_c,
+                    "medium_count": medium_c,
+                    "low_count": low_c,
+                    "info_count": info_c
                 }
             )
             logger.info(f"Scan {scan_id} completed successfully. Report at {pdf_path}")

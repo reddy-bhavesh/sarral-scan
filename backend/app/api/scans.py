@@ -30,7 +30,6 @@ async def get_dashboard_stats(
     all_scans = await db.scan.find_many(
         where={"userId": current_user.id},
         order={"date": "desc"},
-        include={"results": False} 
     )
 
     # Filter by date ranges
@@ -112,19 +111,8 @@ async def get_dashboard_stats(
                     pass
 
     # 6. Recent Scans (Rich)
-    # We explicitly need the last 5 scans WITH finding counts.
-    # We already have metadata in 'all_scans', but we need finding counts.
-    recent_metadata = all_scans[:5]
-    recent_scans_response = []
-    
-    for scan in recent_metadata:
-        # Re-fetch or reuse logic? Re-fetching is cleaner for "include" semantics
-        # Optimization: Fetch results for these 5 specific IDs
-        full_recent_scan = await db.scan.find_unique(
-            where={"id": scan.id},
-            include={"results": True}
-        )
-        recent_scans_response.append(full_recent_scan)
+    # Optimization: Use metadata directly as it now contains summary stats
+    recent_scans_response = all_scans[:5]
 
     return DashboardStats(
         totalScans=StatItem(value=total_scans_count, trend=total_trend),
@@ -161,7 +149,6 @@ async def get_scans(
     return await db.scan.find_many(
         where={"userId": current_user.id},
         order={"date": "desc"},
-        include={"results": True} # Keep for now to avoid breaking other pages
     )
 
 @router.get("/{scan_id}", response_model=ScanResponse)

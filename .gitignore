@@ -38,3 +38,5 @@ backend/debug_*.py
 
 # Backup
 backup_v1/
+
+terraform/

@@ -356,7 +356,7 @@ const Profile = () => {
                             <div className="pt-2">
                                 <button
                                     type="submit"
-                                    disabled={isLoading || (passwordData.new_password && !Object.values(passwordRules).every(Boolean))}
+                                    disabled={isLoading || (!!passwordData.new_password && !Object.values(passwordRules).every(Boolean))}
                                     className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
                                 >
                                     <Save className="w-4 h-4" />

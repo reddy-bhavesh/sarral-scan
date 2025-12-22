@@ -33,10 +33,10 @@ app = FastAPI(title="Pentest Web App API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"], # Allows requests from any origin (frontend)
+    allow_credentials=True, # Allows cookies/auth headers
+    allow_methods=["*"], # Allows all HTTP methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"], # Allows all headers
 )
 
 from fastapi.staticfiles import StaticFiles
@@ -52,7 +52,7 @@ from app.api import events
 app.include_router(events.router, prefix="/events", tags=["events"])
 
 # Ensure reports directory exists
-os.makedirs("reports", exist_ok=True)
+os.makedirs("reports", exist_ok=True) # Ensures reports directory exists
 app.mount("/reports", StaticFiles(directory="reports"), name="reports")
 
 @app.get("/")

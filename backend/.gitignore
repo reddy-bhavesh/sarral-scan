@@ -10,3 +10,4 @@ venv/
 *.sqlite3
 prisma/dev.db
 prisma/dev.db-journal
+verify_optimization.py

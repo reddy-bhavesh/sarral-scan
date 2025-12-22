@@ -37,6 +37,12 @@ class ScanResponse(BaseModel):
     date: datetime
     userId: int
     pdfPath: Optional[str] = None
+    duration_seconds: int = 0
+    critical_count: int = 0
+    high_count: int = 0
+    medium_count: int = 0
+    low_count: int = 0
+    info_count: int = 0
     results: Optional[List[ScanResultResponse]] = None
 
     class Config:
