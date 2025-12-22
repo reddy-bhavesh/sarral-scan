@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check local storage first
-    const saved = localStorage.getItem('theme');
+    const saved = localStorage.getItem('scout-theme');
     if (saved === 'dark' || saved === 'light') return saved;
     
     // Default to dark
@@ -23,7 +23,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
-    localStorage.setItem('theme', theme);
+    localStorage.setItem('scout-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {

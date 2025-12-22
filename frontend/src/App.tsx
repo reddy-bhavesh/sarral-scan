@@ -36,19 +36,22 @@ const AnimatedRoutes = () => {
   );
 };
 
+import { ThemeProvider } from './context/ThemeContext';
 import { SSEProvider } from './context/SSEContext';
 
 // ... (existing imports moved or kept, handled by logic below)
 
 function App() {
   return (
-    <AuthProvider>
-      <SSEProvider>
-        <Router>
-          <AnimatedRoutes />
-        </Router>
-      </SSEProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <SSEProvider>
+          <Router>
+            <AnimatedRoutes />
+          </Router>
+        </SSEProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
