@@ -27,14 +27,15 @@ export const SSEProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const connectSSE = () => {
-        const token = sessionStorage.getItem('token');
+        // Check localStorage first (persistent), then sessionStorage (temporary)
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (!token) return;
 
         // Prevent multiple connections
         if (eventSourceRef.current?.readyState === EventSource.OPEN) return;
         if (eventSourceRef.current?.readyState === EventSource.CONNECTING) return;
 
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const baseUrl = import.meta.env.VITE_API_URL || '';
         const url = `${baseUrl}/events/stream?token=${token}`;
         
         console.log("[SSE] Connecting to:", url);
