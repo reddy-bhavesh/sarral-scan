@@ -390,9 +390,7 @@ ${finding.Evidence || 'N/A'}
                         <button 
                             onClick={() => {
                                 const filename = scan.pdfPath.split(/[/\\]/).pop();
-                                const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                                const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-                                window.open(`${cleanBaseUrl}/reports/${filename}`, '_blank');
+                                window.open(`/reports/${filename}`, '_blank');
                             }}
                             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-lg border border-gray-200 dark:border-gray-700 transition-colors shadow-sm"
                         >
@@ -1175,7 +1173,10 @@ ${finding.Evidence || 'N/A'}
                             <p className="mb-4">PDF Report Preview is available by downloading the file.</p>
                             {scan.pdfPath && (
                                 <button 
-                                    onClick={() => window.open(`http://localhost:8000/reports/${scan.pdfPath.split('\\').pop()}`, '_blank')}
+                                    onClick={() => {
+                                        const filename = scan.pdfPath.split(/[/\\]/).pop();
+                                        window.open(`/reports/${filename}`, '_blank');
+                                    }}
                                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                                 >
                                     Download PDF Report
