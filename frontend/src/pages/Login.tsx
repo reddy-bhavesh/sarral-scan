@@ -46,14 +46,14 @@ const Login = () => {
                         <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
                             <Shield className="w-8 h-8 text-white fill-current" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight">Sarral Scan</span>
+                        <span className="text-2xl font-bold tracking-tight">Scout</span>
                     </div>
                 </div>
 
                 {/* Login Card */}
                 <div className="bg-white dark:bg-gray-900/50 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-8 shadow-xl dark:shadow-2xl">
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome Back</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome to Scout</h2>
                         <p className="text-gray-500 dark:text-gray-400 text-sm">Sign in to access your security dashboard</p>
                     </div>
 

@@ -88,7 +88,7 @@ const Register = () => {
                         <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
                             <Shield className="w-8 h-8 text-white fill-current" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight">Sarral Scan</span>
+                        <span className="text-2xl font-bold tracking-tight">Scout</span>
                     </div>
                 </div>
 

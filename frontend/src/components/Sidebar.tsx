@@ -20,7 +20,7 @@ const Sidebar = () => {
                 <div className="bg-blue-600 p-2 rounded-lg">
                     <Shield className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">Sarral Scan</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">Scout</span>
             </div>
 
             <nav className="flex-1 p-4 space-y-2">

@@ -109,7 +109,7 @@ class ScanManager:
         from app.core.tool_config import TOOL_CONFIG
 
         # Create a temporary directory for this scan
-        scan_dir = f"/tmp/sarral_scan_{scan_id}"
+        scan_dir = f"/tmp/scout_scan_{scan_id}"
         print(f"Creating temp directory: {scan_dir}")
         await ssh_client.create_dir(scan_dir)
 

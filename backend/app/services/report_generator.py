@@ -61,7 +61,7 @@ class ReportGenerator:
             # Text
             footer_text = f"{scan_data.target}"
             canvas.drawCentredString(letter[0]/2, 40, "BUSINESS CONFIDENTIAL")
-            canvas.drawCentredString(letter[0]/2, 30, f"Copyright © Sarral Security")
+            canvas.drawCentredString(letter[0]/2, 30, f"Copyright © Scout Security")
             
             canvas.drawString(50, 30, footer_text)
             canvas.drawRightString(letter[0]-50, 30, f"Page {doc.page}")
@@ -97,7 +97,7 @@ class ReportGenerator:
         # --- 1. Cover Page ---
         story.append(Spacer(1, 2*inch))
         # Logo could go here
-        story.append(Paragraph("SARRAL SECURITY", style_title)) 
+        story.append(Paragraph("SCOUT SECURITY", style_title)) 
         story.append(Spacer(1, 1.5*inch))
         
         story.append(Paragraph(f"{scan_data.target}", style_title))
@@ -115,7 +115,7 @@ class ReportGenerator:
 
         # --- 2. Confidentiality & Disclaimer ---
         story.append(Paragraph("Confidentiality Statement", style_h1))
-        story.append(Paragraph("This document is the exclusive property of the Client and Sarral Security. This document contains proprietary and confidential information. Duplication, redistribution, or use, in whole or in part, in any form, requires consent.", style_normal))
+        story.append(Paragraph("This document is the exclusive property of the Client and Scout Security. This document contains proprietary and confidential information. Duplication, redistribution, or use, in whole or in part, in any form, requires consent.", style_normal))
         story.append(Spacer(1, 0.2*inch))
         
         story.append(Paragraph("Disclaimer", style_h1))
@@ -125,7 +125,7 @@ class ReportGenerator:
         story.append(Paragraph("Contact Information", style_h1))
         contact_data = [
             ["Name", "Title", "Contact Information"],
-            ["Sarral Scan", "Automated Scanner", "support@sarral.io"],
+            ["Scout", "Automated Scanner", "support@scout.io"],
             ["Client", "Security Team", f"security@{scan_data.target}"]
         ]
         t_contact = Table(contact_data, colWidths=[150, 150, 200], hAlign='LEFT')
@@ -182,7 +182,7 @@ class ReportGenerator:
 
         # --- 4. Executive Summary ---
         story.append(Paragraph("Executive Summary", style_h1))
-        story.append(Paragraph(f"Sarral Security evaluated {scan_data.target}'s security posture on {datetime.now().strftime('%B %d, %Y')}. The following sections provide a high-level overview of vulnerabilities discovered.", style_normal))
+        story.append(Paragraph(f"Scout Security evaluated {scan_data.target}'s security posture on {datetime.now().strftime('%B %d, %Y')}. The following sections provide a high-level overview of vulnerabilities discovered.", style_normal))
         story.append(Spacer(1, 10))
         
         story.append(Paragraph("Testing Summary", style_h2))
