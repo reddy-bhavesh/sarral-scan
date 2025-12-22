@@ -2,7 +2,7 @@ import { createContext, useState, useContext, useEffect, type ReactNode } from '
 
 interface AuthContextType {
     user: any;
-    login: (token: string, userData: any) => void;
+    login: (token: string, userData: any, remember?: boolean) => void;
     logout: () => void;
     isAuthenticated: boolean;
     isLoading: boolean;
@@ -16,8 +16,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        const token = sessionStorage.getItem('token');
-        const storedUser = sessionStorage.getItem('user');
+        // Check localStorage first (persistent), then sessionStorage (temporary)
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+        
         if (token) {
             setIsAuthenticated(true);
             if (storedUser) {
@@ -27,9 +29,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
     }, []);
 
-    const login = (token: string, userData: any) => {
-        sessionStorage.setItem('token', token);
-        sessionStorage.setItem('user', JSON.stringify(userData));
+    const login = (token: string, userData: any, remember: boolean = false) => {
+        const storage = remember ? localStorage : sessionStorage;
+        
+        // Clear potential duplicate in other storage to avoid state mismatch
+        if (remember) {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+        } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+        }
+
+        storage.setItem('token', token);
+        storage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         setIsAuthenticated(true);
     };
@@ -37,6 +50,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const logout = () => {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setIsAuthenticated(false);
         setUser(null);
     };

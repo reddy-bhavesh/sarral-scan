@@ -23,7 +23,7 @@ const Login = () => {
             formData.append('username', email);
             formData.append('password', password);
             const response = await api.post('/auth/login', formData);
-            login(response.data.access_token, response.data.user);
+            login(response.data.access_token, response.data.user, rememberMe);
             console.log()
             navigate('/dashboard');
         } catch (err: any) {
