@@ -137,6 +137,7 @@ const Register = () => {
                                     onChange={handleChange}
                                     className="block w-full pl-10 pr-3 py-2.5 bg-gray-50 dark:bg-gray-950/50 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
                                     placeholder="you@example.com"
+                                    autoComplete="email"
                                     required
                                 />
                             </div>
@@ -172,6 +173,7 @@ const Register = () => {
                                     onChange={handleChange}
                                     className="block w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-950/50 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
                                     placeholder="Create a strong password"
+                                    autoComplete="new-password"
                                     required
                                 />
                                 <button
@@ -221,6 +223,7 @@ const Register = () => {
                                     onChange={handleChange}
                                     className="block w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-950/50 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
                                     placeholder="Confirm your password"
+                                    autoComplete="new-password"
                                     required
                                 />
                                 <button
