@@ -40,6 +40,12 @@ const Dashboard = () => {
                 const data = response.data;
                 console.log(data);
                 
+                if (!data || !data.totalScans) {
+                    console.error('Invalid or missing dashboard data:', data);
+                    // Could set an empty state or error state here
+                    return;
+                }
+
                 // 1. Stats from Backend
                 setStats([
                     { label: 'Total Scans', value: data.totalScans.value, trend: data.totalScans.trend, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-500/10' },

@@ -48,6 +48,13 @@ class ScanResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class PaginatedScanResponse(BaseModel):
+    items: List[ScanResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+
 class ChartDataPoint(BaseModel):
     date: str
     total: int
