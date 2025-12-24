@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
-import { Search, Filter, Trash2, Eye, AlertTriangle, CheckCircle, Clock, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Trash2, Eye, AlertTriangle, CheckCircle, Clock, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../api/axios';
 import { useSSE } from '../context/SSEContext';
 
