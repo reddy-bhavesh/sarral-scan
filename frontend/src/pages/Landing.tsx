@@ -422,9 +422,11 @@ const Landing = () => {
                                     <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-purple-500/50 -z-10" />
                                 )}
                                 
-                                {/* Step Number */}
-                                <div className="absolute -top-4 -right-4 text-6xl font-black text-gray-100 dark:text-gray-800 opacity-50 group-hover:opacity-100 transition-opacity">
-                                    {item.step}
+                                {/* Step Number - Prominent Badge */}
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                                        {index + 1}
+                                    </div>
                                 </div>
 
                                 <div className="relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-xl transition-all">
