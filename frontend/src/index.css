@@ -5,19 +5,61 @@
 @tailwind utilities;
 
 @layer utilities {
-    /* Hide scrollbar for Chrome, Safari and Opera */
+    /* Hide scrollbar utility (optional use) */
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
-    /* Hide scrollbar for IE, Edge and Firefox */
     .no-scrollbar {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
+}
+
+/* Custom Scrollbar - Global Styles */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 transparent;
+}
+
+/* Dark mode specific adjustments */
+.dark ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Light mode specific adjustments */
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
 }
 
 @layer base {
     body {
-        @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300 no-scrollbar;
+        @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300;
     }
 }

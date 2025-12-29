@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { useMsal } from "@azure/msal-react";
+import { loginRequest } from "../config/msalConfig";
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -13,6 +15,8 @@ const Login = () => {
     const navigate = useNavigate();
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [msLoading, setMsLoading] = useState(false);
+    const { instance } = useMsal();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,6 +34,52 @@ const Login = () => {
             setError(err.response?.data?.detail || 'Invalid credentials. Please try again.');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleMicrosoftLogin = async () => {
+        setError('');
+        setMsLoading(true);
+        try {
+            // Popup login with Microsoft
+            const response = await instance.loginPopup(loginRequest);
+            
+            // Send ID token to backend for validation
+            const result = await api.post('/auth/microsoft', {
+                id_token: response.idToken
+            });
+            
+            // Use Scout's login flow
+            login(result.data.access_token, result.data.user, false);
+            navigate('/dashboard');
+            
+        } catch (err: any) {
+            console.error('Microsoft login failed:', err);
+            
+            // Handle different error types with user-friendly messages
+            if (err.errorCode === 'user_cancelled' || err.message?.includes('user_cancelled')) {
+                // User closed the popup - don't show error, just reset state
+                setMsLoading(false);
+                return;
+            } else if (err.errorCode === 'popup_window_error') {
+                setError('❌ Unable to open Microsoft login popup. Please allow popups for this site and try again.');
+            } else if (err.response?.status === 401) {
+                setError('❌ Invalid Microsoft account. Please contact your administrator.');
+            } else if (err.response?.status === 403) {
+                setError('❌ Your account has been deactivated. Please contact your administrator.');
+            } else if (err.response?.data?.detail) {
+                // Backend error with detail
+                setError(`❌ ${err.response.data.detail}`);
+            } else if (err.message?.includes('Network')) {
+                setError('❌ Network error. Please check your internet connection and try again.');
+            } else if (err.errorCode) {
+                // MSAL-specific errors
+                setError(`❌ Microsoft login failed: ${err.errorCode}. Please try again.`);
+            } else {
+                setError('❌ Failed to sign in with Microsoft. Please try again or use email/password.');
+            }
+        } finally {
+            setMsLoading(false);
         }
     };
 
@@ -136,6 +186,37 @@ const Login = () => {
                             )}
                         </button>
                     </form>
+
+                    {/* OR Divider */}
+                    <div className="flex items-center my-6">
+                        <div className="flex-1 border-t border-gray-300 dark:border-gray-700"></div>
+                        <span className="px-4 text-sm text-gray-500 dark:text-gray-400">OR</span>
+                        <div className="flex-1 border-t border-gray-300 dark:border-gray-700"></div>
+                    </div>
+
+                    {/* Microsoft SSO Button */}
+                    <button
+                        type="button"
+                        onClick={handleMicrosoftLogin}
+                        disabled={msLoading || isLoading}
+                        className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {msLoading ? (
+                            <div className="w-5 h-5 border-2 border-gray-400 border-t-gray-600 rounded-full animate-spin"></div>
+                        ) : (
+                            <>
+                                <svg className="w-5 h-5" viewBox="0 0 21 21">
+                                    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                                    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                                    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                                </svg>
+                                <span className="font-medium text-gray-700 dark:text-gray-200">
+                                    Sign in with Microsoft
+                                </span>
+                            </>
+                        )}
+                    </button>
 
                     <div className="mt-8 text-center">
                         <p className="text-sm text-gray-600 dark:text-gray-500">

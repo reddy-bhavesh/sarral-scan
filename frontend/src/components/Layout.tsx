@@ -7,7 +7,7 @@ const LayoutContent = () => {
     return (
         <div className="h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex overflow-hidden transition-colors duration-300">
             <Sidebar />
-            <main className="flex-1 ml-64 p-8 h-full overflow-y-auto no-scrollbar">
+            <main className="flex-1 ml-64 p-8 h-full overflow-y-auto">
                 <Outlet />
             </main>
         </div>
