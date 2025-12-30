@@ -3,6 +3,7 @@ import json
 from typing import Dict, List, AsyncGenerator
 from collections import defaultdict
 
+
 class EventManager:
     def __init__(self):
         # Map user_id to a list of active connection queues
