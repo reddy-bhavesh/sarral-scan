@@ -5,6 +5,8 @@ generator client {
   engineType    = "binary"
 }
 
+// Active schema targets SQLite for local dev.
+// For the MySQL production variant see prisma/schema.mysql.prisma.
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -25,7 +27,11 @@ model User {
   auth_provider String    @default("local") // "local" or "microsoft"
   last_login    DateTime?
 
-  scans Scan[]
+  scans       Scan[]
+  assets      Asset[]
+  schedules   ScanSchedule[]
+  aiTools     AiTool[]
+  engagements Engagement[]
 }
 
 model Scan {
@@ -44,7 +50,27 @@ model Scan {
   medium_count     Int          @default(0)
   low_count        Int          @default(0)
   info_count       Int          @default(0)
-  results          ScanResult[]
+
+  // CTEM: agentic orchestration opt-in + scheduling link
+  mode              String  @default("classic") // "classic" | "agentic" | "deep"
+  scheduleId        Int?
+  agent_tool_budget Int?
+
+  // Deep Agent mode: the authorized engagement this scan runs under (mode="deep").
+  engagementId      Int?
+  engagement        Engagement? @relation(fields: [engagementId], references: [id])
+  selectedSpecialists String? // JSON array of specialist keys chosen for a deep run
+
+  // AI-Guided run (mode="agentic" + non-null objective). Free-form CTEM agent.
+  objective         String? // user goal; presence + mode=agentic => AI-Guided
+  constraints       String? // JSON scope: in_scope[], exclusions[], caps
+  selectedToolIds   String? // JSON snapshot of AiTool ids chosen for this run
+  agent_max_seconds Int?
+
+  results        ScanResult[]
+  findings       Finding[]
+  observations   AssetObservation[]
+  agentDecisions AgentDecision[]
 }
 
 model ScanResult {
@@ -66,6 +92,9 @@ model ScanResult {
   started_at      DateTime?
   finished_at     DateTime?
   createdAt       DateTime  @default(now())
+
+  findings       Finding[]
+  agentDecisions AgentDecision[] @relation("AgentDecisionResult")
 }
 
 model WebIntelHistory {
@@ -76,4 +105,223 @@ model WebIntelHistory {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ---------- CTEM: persistent attack-surface inventory ----------
+model Asset {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  assetType   String // "domain" | "subdomain" | "ip" | "url" | "service"
+  value       String // normalized: lowercased host, ip, or scheme://host:port
+  rootTarget  String // original scan target this surface belongs to (grouping)
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+  isActive    Boolean  @default(true) // false when no longer observed (drift)
+  criticality String   @default("medium") // "critical"|"high"|"medium"|"low"
+  tags        String? // JSON array string
+  metadata    String? // JSON: ports, tech stack, resolved IPs, status codes
+  createdAt   DateTime @default(now())
+
+  findings     Finding[]
+  observations AssetObservation[]
+
+  @@unique([userId, assetType, value]) // dedup key
+  @@index([userId, rootTarget])
+  @@index([userId, isActive])
+}
+
+// Per-scan sighting of an asset → enables drift ("new" / "disappeared")
+model AssetObservation {
+  id         Int      @id @default(autoincrement())
+  assetId    Int
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  scanId     Int
+  scan       Scan     @relation(fields: [scanId], references: [id])
+  phase      String?
+  source     String // tool name that discovered it
+  metadata   String? // JSON snapshot at this observation
+  observedAt DateTime @default(now())
+
+  @@index([scanId])
+  @@index([assetId, observedAt])
+}
+
+// ---------- CTEM: Finding (promoted out of gemini_summary JSON) ----------
+model Finding {
+  id           Int         @id @default(autoincrement())
+  scanId       Int
+  scan         Scan        @relation(fields: [scanId], references: [id])
+  scanResultId Int? // synthetic AI_PHASE_SUMMARY row it was exploded from
+  scanResult   ScanResult? @relation(fields: [scanResultId], references: [id])
+  assetId      Int?
+  asset        Asset?      @relation(fields: [assetId], references: [id])
+
+  fingerprint String // hash(assetValue|title|cveId|tool) — stable identity
+  title       String // maps from JSON "Vulnerability"/"Heading"
+  description String
+  tool        String // maps from JSON "Tool"
+  phase       String?
+  severity    String // "Critical"|"High"|"Medium"|"Low"|"Info"
+  likelihood  String?
+  impact      String?
+  owasp       String?
+  cwe         String?
+  evidence    String?
+  remediation String?
+  cveId       String? // primary (highest-severity) CVE — drives risk/enrichment
+  cveIds      String? // JSON array of ALL matched CVE ids (incl. primary)
+
+  // CTEM lifecycle / drift
+  status          String   @default("open") // open|remediated|accepted|false_positive|reopened
+  firstSeenScanId Int?
+  firstSeen       DateTime @default(now())
+  lastSeen        DateTime @default(now())
+
+  // Prioritization engine outputs (M4)
+  riskScore  Float?
+  slaDueDate DateTime?
+
+  createdAt DateTime @default(now())
+
+  remediation_ticket Remediation?
+
+  @@index([scanId])
+  @@index([fingerprint])
+  @@index([assetId])
+  @@index([cveId])
+  @@index([status])
+  @@index([severity])
+}
+
+// ---------- CTEM: CVE enrichment cache (shared across findings/users) ----------
+model CveEnrichment {
+  id             Int       @id @default(autoincrement())
+  cveId          String    @unique // "CVE-2024-1234"
+  cvssV3Score    Float?
+  cvssV3Vector   String?
+  cvssV3Severity String?
+  epssScore      Float? // probability 0-1
+  epssPercentile Float?
+  isKev          Boolean   @default(false)
+  kevDateAdded   DateTime?
+  kevDueDate     DateTime?
+  description    String?
+  fetchedAt      DateTime  @default(now())
+  staleAfter     DateTime? // when to refresh (e.g. fetchedAt + 24h)
+  raw            String? // JSON blob of source responses for audit
+
+  @@index([cveId])
+  @@index([isKev])
+}
+
+// ---------- CTEM: Remediation / ticket tracking ----------
+model Remediation {
+  id               Int       @id @default(autoincrement())
+  findingId        Int       @unique
+  finding          Finding   @relation(fields: [findingId], references: [id])
+  status           String    @default("todo") // todo|in_progress|blocked|done|wont_fix
+  assignee         String?
+  assigneeUserId   Int?
+  dueDate          DateTime? // copied from Finding.slaDueDate at creation, then editable
+  slaBreached      Boolean   @default(false)
+  externalTicketId String? // Jira/ServiceNow id (future integration)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  closedAt         DateTime?
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+// ---------- CTEM: recurring scans ----------
+model ScanSchedule {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  target    String
+  phases    String // same comma-joined format as Scan.phases
+  mode      String    @default("classic") // "classic"|"agentic"
+  frequency String // "daily"|"weekly"|"monthly"|"cron"
+  cronExpr  String? // when frequency == "cron"
+  atTime    String? // optional "HH:MM" (UTC) time-of-day for daily/weekly/monthly runs
+  isEnabled Boolean   @default(true)
+  lastRunAt DateTime?
+  nextRunAt DateTime?
+  lastScanId Int?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isEnabled, nextRunAt])
+}
+
+// ---------- CTEM: agent decision log ----------
+model AgentDecision {
+  id             Int      @id @default(autoincrement())
+  scanId         Int
+  scan           Scan     @relation(fields: [scanId], references: [id])
+  stepIndex      Int // monotonically increasing decision number within scan
+  afterPhase     String? // the phase that just completed when this decision was made
+  selectedTools  String // JSON array
+  skippedTools   String // JSON array of {tool, reason}
+  paramOverrides String // JSON object {tool: {param: value}}
+  reasoning      String // model's free-text rationale
+  confidence     Float? // 0-1
+  rejectedItems  String? // JSON: tools the model asked for that were blocked + why
+  modelUsed      String? // "gemini" | "claude" | "fallback"
+  tokensUsed     Int?
+
+  // AI-Guided (free-form) fields
+  authoredCommand String? // the exact shell command the model wrote
+  ctemStage       String? // Scoping|Discovery|Prioritization|Validation|Mobilization
+  expectation     String? // what the model expected the command to reveal
+  done            Boolean @default(false) // model declared objective met
+  scanResultId    Int? // the ScanResult this command produced
+  scanResult      ScanResult? @relation("AgentDecisionResult", fields: [scanResultId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([scanId, stepIndex])
+}
+
+// ---------- Deep Agent: authorized engagement (target authorization) ----------
+// A deep scan (mode="deep") may only run against a target covered by an ACTIVE,
+// unexpired Engagement. The gate (services/deep_agent/authorization.py) builds the
+// scope dict (in_scope/exclusions) consumed by _is_command_safe. Fail-closed: no
+// matching engagement => the scan refuses to start.
+model Engagement {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id])
+  org        String // organization this engagement authorizes testing for
+  inScope    String // JSON array of authorized hosts/domains/CIDRs
+  exclusions String    @default("[]") // JSON array of excluded hosts
+  approver   String? // who authorized the test (name/email/ticket)
+  expiresAt  DateTime? // engagement is invalid after this instant
+  isActive   Boolean   @default(true)
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  scans Scan[]
+
+  @@index([userId, isActive])
+}
+
+// ---------- AI-Guided: per-user tool registry ----------
+model AiTool {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  name        String // display name, e.g. "Nmap"
+  binary      String // executable the authored command MUST invoke, e.g. "nmap"
+  description String // what it does (fed to the model)
+  usageNotes  String? // hints/flags/examples for command authoring
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, isEnabled])
 }

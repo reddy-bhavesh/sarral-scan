@@ -6,9 +6,16 @@ import PageTransition from '../components/PageTransition';
 import { Search, Trash2, Eye, AlertTriangle, CheckCircle, Clock, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../api/axios';
 import { useSSE } from '../context/SSEContext';
+import ScrollText from '../components/ScrollText';
 
 const History = () => {
     const navigate = useNavigate();
+    // Deep Agent scans use the 3D orchestrator view; AI-Guided scans (agentic +
+    // objective) use the dedicated two-pane view; everything else uses classic details.
+    const viewPath = (scan: any) =>
+        scan.mode === 'deep' ? `/deep-scan/${scan.id}`
+            : scan.mode === 'agentic' && scan.objective ? `/ai-scan/${scan.id}`
+            : `/scan/${scan.id}`;
     const { addEventListener, removeEventListener } = useSSE();
     const [scans, setScans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -147,11 +154,11 @@ const History = () => {
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         transition={{ duration: 0.2 }}
                                         key={scan.id} 
-                                        onClick={() => navigate(`/scan/${scan.id}`)}
+                                        onClick={() => navigate(viewPath(scan))}
                                         className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer group"
                                     >
                                         <td className="px-6 py-4 text-sm font-mono text-blue-600 dark:text-blue-500">#{scan.scan_number}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">{scan.target}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium max-w-xs"><ScrollText>{scan.target}</ScrollText></td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                                                 scan.status === 'Completed' ? 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-500 border-green-200 dark:border-green-500/20' :
@@ -192,7 +199,7 @@ const History = () => {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/scan/${scan.id}`); }}
+                                                    onClick={(e) => { e.stopPropagation(); navigate(viewPath(scan)); }}
                                                     className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                                     title="View Details"
                                                 >

@@ -1,10 +1,29 @@
 version: '3.8'
 
-# Local/default stack uses SQLite (matches prisma/schema.prisma).
-# For the MySQL production stack, use docker-compose.mysql.yml together with
-# prisma/schema.mysql.prisma.
-
 services:
+  # Database - MySQL 8 (CTEM M8 cutover from SQLite)
+  db:
+    image: mysql:8.0
+    container_name: scout-db
+    environment:
+      MYSQL_DATABASE: scout
+      MYSQL_USER: scout
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-scout}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"   # exposed for local dev / prisma db push from the host
+    volumes:
+      - scout-db:/var/lib/mysql
+    networks:
+      - scout-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uscout", "-p${MYSQL_PASSWORD:-scout}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   # Frontend - React SPA served by Nginx
   frontend:
     build:
@@ -28,8 +47,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Database (SQLite, persisted on the scout-db volume)
-      - DATABASE_URL=file:/app/data/dev.db
+      # Database (MySQL). entrypoint.sh waits for it and runs `prisma db push`.
+      - DATABASE_URL=mysql://scout:${MYSQL_PASSWORD:-scout}@db:3306/scout
       # Execution mode - "local" for container, "ssh" for remote Kali
       - EXECUTION_MODE=local
       # JWT Configuration
@@ -46,9 +65,10 @@ services:
       - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID:-}
       - MICROSOFT_TENANT_ID=${MICROSOFT_TENANT_ID:-organizations}
       - ENABLE_MICROSOFT_SSO=${ENABLE_MICROSOFT_SSO:-false}
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
-      # Persistent storage for database
-      - scout-db:/app/data
       # Persistent storage for reports
       - scout-reports:/app/reports
     networks:

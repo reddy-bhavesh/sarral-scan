@@ -19,13 +19,19 @@ class EventManager:
         try:
             # Yield initial connection message or ping
             yield self._format_sse("CONNECTED", {"message": "Connected to event stream"})
-            
+
             while True:
-                # Wait for next message
-                message = await queue.get()
-                yield message
+                # Wait for the next message, but wake up periodically to emit a
+                # heartbeat. This keeps proxies happy AND ensures the generator
+                # isn't blocked forever on queue.get() — so it exits promptly when
+                # the request task is cancelled (client disconnect or server shutdown).
+                try:
+                    message = await asyncio.wait_for(queue.get(), timeout=15)
+                    yield message
+                except asyncio.TimeoutError:
+                    yield ": keep-alive\n\n"  # SSE comment line; ignored by clients
         except asyncio.CancelledError:
-            # Client disconnected
+            # Client disconnected or server shutting down
             pass
         finally:
             # Cleanup

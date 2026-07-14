@@ -1,0 +1,105 @@
+Understanding the CTEM Framework
+CTEM represents Gartner's recognition that traditional vulnerability management approaches no longer meet modern security challenges. The framework addresses fundamental problems in how organizations identify, prioritize, and remediate security exposures.
+
+The Core Problem CTEM Solves
+Traditional vulnerability management operates as a periodic activity cycle. Monthly or quarterly scans identify vulnerabilities. CVSS scores determine severity. Patch management processes address findings based on score. The cycle repeats.
+
+This approach creates several problems. Time-based cycles miss continuous changes as applications deploy multiple times daily, cloud infrastructure scales dynamically, and the attack surface changes constantly. Point-in-time assessments capture only snapshots of continuously evolving exposure.
+
+CVSS scores don't reflect business risk. A critical CVSS score doesn't mean the vulnerability threatens your business. High-scored vulnerability in the development system differs from moderate-scored vulnerability in payment processing. Generic severity ratings ignore business context.
+
+Volume overwhelms capacity. Scanning identifies more vulnerabilities than teams can remediate. Without clear prioritization, teams either remediate based on arbitrary criteria or simply address the newest findings. Neither reduces actual risk effectively.
+
+Validation gaps persist. After remediation, teams rarely validate that exposure has actually been reduced. Patches deploy, tickets close, metrics report reduced vulnerability counts. Whether the attack surface actually decreased remains unverified.
+
+CTEM addresses these issues through continuous, business-aligned exposure management rather than periodic vulnerability scoring.
+
+Organizations implementing application security assessment programs recognize that CTEM provides a framework translating assessment findings into prioritized remediation, reducing measurable exposure.
+
+The Five Stages of CTEM
+Gartner's CTEM framework consists of five stages forming a continuous cycle rather than a linear process.
+
+Stage 1: Scoping
+Scoping establishes what matters to the organization and requires protection. This stage answers: "What are we trying to protect and why?"
+
+Define business-critical assets, including customer data, intellectual property, financial systems, operational technology, and revenue-generating applications. Not all assets warrant equal protection. Scoping establishes protection priorities aligned with business impact.
+
+Establish stakeholder context by engaging business stakeholders, understanding which systems support critical functions. Security teams may not independently know that specific application processes significant daily transactions or that a database compromise would halt operations. Stakeholder input ensures scoping reflects business priorities.
+
+Determine risk tolerance as different organizations and different assets have varying risk appetites. Compliance requirements, industry regulations, customer expectations, and business strategy all influence acceptable risk levels. Scoping makes risk tolerance explicit.
+
+Define attack surface boundaries, identifying what's in scope, including internet-facing assets, cloud infrastructure, user endpoints, third-party integrations, and supply chain connections. Comprehensive scoping prevents blind spots.
+
+Set program objectives, establishing what the CTEM program aims to achieve. Reduce exposure to specific threat actors, meet compliance requirements, protect particular business processes, enable secure digital transformation. Clear objectives guide subsequent stages.
+
+Stage 2: Discovery
+Discovery identifies all security exposures within the defined scope. This extends beyond traditional vulnerability scanning to encompass comprehensive exposure identification.
+
+Asset discovery identifies all assets within scope, including shadow IT, forgotten systems, temporary infrastructure that became permanent, and unmanaged devices. Attack surface includes known and unknown assets. Discovery must find both.
+
+Vulnerability identification detects known vulnerabilities through automated scanning. Traditional vulnerability management excels here. CTEM incorporates but extends beyond CVE identification.
+
+Misconfiguration detection identifies security misconfigurations in cloud infrastructure, access controls, encryption settings, and service configurations. Misconfigurations often create more severe exposure than missing patches.
+
+Exposure path mapping understands how attackers could chain multiple issues to reach critical assets. Single vulnerability may not threaten business, but combination of misconfiguration, weak authentication, and lateral movement path could enable significant compromise.
+
+Identity and access exposure identifies excessive permissions, orphaned accounts, weak authentication, privilege escalation paths, and credential exposure. Identity-based attacks increasingly bypass traditional perimeter security.
+
+External exposure monitoring tracks credential leaks, exposed secrets, misconfigured cloud storage, unintended data exposure, and exploitable external services. Organizations often unknowingly expose sensitive information or make it publicly accessible.
+
+Organizations conducting web application penetration testing complement automated discovery with manual testing, identifying exposure paths that automated scanning misses.
+
+Stage 3: Prioritization
+Prioritization ranks discovered exposures by actual business risk rather than generic severity scores. This stage separates CTEM from traditional vulnerability management most significantly.
+
+Apply business context by evaluating exposure impact based on affected asset criticality, data sensitivity, operational importance, and regulatory requirements. Critical vulnerability in test environment differs fundamentally from a moderate vulnerability in the production payment system.
+
+Assess threat intelligence, incorporating information about active exploitation, attacker targeting, ransomware campaigns, and industry-specific threats. Vulnerabilities under active exploitation warrant higher priority than theoretical issues.
+
+Analyze exploitability, determining whether vulnerabilities are actually exploitable in your environment. Some CVEs require specific configurations, network access, or authentication that your implementation doesn't provide. Exploitable exposures rank higher.
+
+Evaluate compensating controls, considering whether existing security controls mitigate exposure. Network segmentation, web application firewalls, intrusion prevention, or monitoring may reduce risk even if a vulnerability exists. Compensating controls affect prioritization.
+
+Calculate attack path feasibility, assessing whether exposure enables a realistic attack path to critical assets. Vulnerability requiring five prerequisite compromises differs from the direct path to the crown jewels. Attack graph analysis informs prioritization.
+
+Measure potential impact by quantifying potential business impact from successful exploitation, including financial loss, operational disruption, regulatory penalties, and reputational damage. Impact assessment ensures remediation addresses genuine business risk.
+
+Organizations implementing continuous penetration testing gain ongoing validation that prioritization accurately reflects actual exploitability under realistic attack scenarios.
+
+Stage 4: Validation
+Validation tests whether security controls and remediation actually reduce exposure. This stage ensures security activities translate to measurable risk reduction.
+
+Breach and attack simulation executes controlled attacks, testing whether exposures are genuinely exploitable. Simulate real attack techniques, validating that high-priority findings actually enable compromise. Simulation provides evidence-based validation.
+
+Purple team exercises combine offensive testing with defensive response validation. Test not just whether attacks succeed but whether security monitoring detects them and incident response engages appropriately. Purple teaming validates detection alongside prevention.
+
+Red team assessments conduct adversary simulations, testing whether attackers could actually achieve high-impact objectives. Red teaming validates the entire security program under realistic conditions, identifying gaps that component testing misses.
+
+Compensating control testing verifies that compensating controls actually prevent exploitation. Security teams often assume WAFs block attacks, network segmentation prevents lateral movement, or monitoring detects suspicious activity. Validation tests these assumptions.
+
+Remediation verification validates after the fixes are deployed that the exposure has actually been eliminated. The patch may not install correctly. The configuration change may not apply as intended. Validation confirms that remediation achieved the desired risk reduction.
+
+Continuous monitoring validates whether the security monitoring and alerting function is working correctly. Validated controls today may degrade over time. Continuous validation ensures sustained risk reduction.
+
+Organizations conducting offensive security testing provide rigorous validation that security controls reduce exposure under realistic attack conditions, not just theoretical assessments.
+
+Stage 5: Mobilization
+Mobilization translates validated findings into coordinated remediation actions across the organization. This stage ensures insights drive actual risk reduction.
+
+Prioritized remediation planning develops remediation plans addressing the highest-priority exposures first. Plans specify what to fix, who fixes it, by when, and how success is measured. Clear ownership and timelines ensure accountability.
+
+Cross-functional coordination recognizes that security findings require action from multiple teams. Application vulnerabilities need development teams. Infrastructure issues require IT operations. Cloud misconfigurations involve cloud engineers. Mobilization coordinates across functions.
+
+Resource allocation assigns resources, including time, budget, and personnel to remediation activities. High-priority exposure reduction may require temporary project teams, vendor support, or reallocation from other initiatives.
+
+Communication and escalation ensure findings reach appropriate stakeholders, including technical teams implementing fixes, management authorizing resources, and executives understanding business risk. Effective communication drives action.
+
+Exception management addresses exposures that cannot be immediately remediated through documented exceptions with compensating controls, risk acceptance, and review timelines, ensuring nothing falls through the gaps.
+
+Metrics and reporting track remediation progress, measure risk reduction, and report results to stakeholders. Metrics demonstrate CTEM program value and guide continuous improvement.
+
+Continuous improvement learns from each cycle, examining what worked in remediation, what barriers hindered progress, and how future cycles can improve. Mobilization includes process refinement.
+
+The five stages form a continuous cycle, not a sequential project. As mobilization completes, the cycle returns to scoping with updated priorities.
+
+Organizations implementing API penetration testing incorporate API-specific exposure into CTEM discovery and validation stages, ensuring the API attack surface receives appropriate attention.

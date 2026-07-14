@@ -102,3 +102,45 @@
         @apply from-blue-700 to-blue-500;
     }
 }
+
+/* Dark-mode border visibility. On the navy gray-900/950 surfaces, gray-800
+   borders/dividers nearly vanish — lift the app's standard dark border + divide
+   utilities to a more legible shade. One rule keeps all ~150 usages consistent. */
+@layer utilities {
+    .dark .dark\:border-gray-800 {
+        border-color: #2c3749;
+    }
+    .dark .dark\:divide-gray-800 > :not([hidden]) ~ :not([hidden]) {
+        border-color: #2c3749;
+    }
+}
+
+/* Hover-to-scroll for truncated text (ScrollText component). Clips overflowing
+   text and, on hover, scrolls it just enough to reveal the rest — and ONLY when
+   it actually overflows (container-query math: 100cqw is the box width, 100% is
+   the text width, so calc(100cqw - 100%) is 0 or positive when it fits → no move). */
+@layer utilities {
+    .hscroll {
+        container-type: inline-size;
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        vertical-align: bottom;
+    }
+    .hscroll-inner {
+        display: inline-block;
+        white-space: nowrap;
+    }
+    .hscroll:hover .hscroll-inner {
+        animation: hscroll-reveal 3.8s ease-in-out forwards;
+    }
+    @keyframes hscroll-reveal {
+        0%, 12% {
+            transform: translateX(0);
+        }
+        88%, 100% {
+            transform: translateX(min(0px, calc(100cqw - 100%)));
+        }
+    }
+}

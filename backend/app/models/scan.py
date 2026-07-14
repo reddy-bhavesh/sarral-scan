@@ -4,7 +4,11 @@ from datetime import datetime
 
 class ScanCreate(BaseModel):
     target: str
-    phases: List[str]
+    phases: List[str] = []
+    mode: Optional[str] = "classic"  # "classic" | "agentic" | "deep"
+    # Deep Agent mode (mode="deep")
+    engagementId: Optional[int] = None          # authorized engagement to run under
+    selectedSpecialists: Optional[List[str]] = None  # specialist keys to deploy
 
 class ScanUpdate(BaseModel):
     status: Optional[str] = None
@@ -34,6 +38,9 @@ class ScanResponse(BaseModel):
     scan_number: int
     status: str
     phases: str
+    mode: Optional[str] = "classic"
+    objective: Optional[str] = None
+    selectedSpecialists: Optional[str] = None  # JSON array (deep mode)
     date: datetime
     userId: int
     pdfPath: Optional[str] = None

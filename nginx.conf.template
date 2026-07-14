@@ -30,7 +30,7 @@ http {
         }
 
         # API Proxy - All backend routes
-        location ~ ^/(api|auth|scans|users|events|system|reports|breach|web-intel) {
+        location ~ ^/(api|auth|scans|users|events|system|reports|breach|web-intel|engagements) {
             # Use Docker/Azure DNS resolver
             resolver 127.0.0.11 valid=30s;
             

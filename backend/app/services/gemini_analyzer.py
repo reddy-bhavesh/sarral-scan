@@ -14,15 +14,23 @@ def _normalize_severity(severity: str) -> str:
     if not severity:
         return "Info"
     s = severity.strip().lower()
-    if s in ['critical', 'crit', 'c']: 
+    if s in ['critical', 'crit', 'c']:
         return 'Critical'
-    if s in ['high', 'hi', 'h']: 
+    if s in ['high', 'hi', 'h']:
         return 'High'
-    if s in ['medium', 'med', 'm', 'moderate']: 
+    if s in ['medium', 'med', 'm', 'moderate']:
         return 'Medium'
-    if s in ['low', 'lo', 'l']: 
+    if s in ['low', 'lo', 'l']:
         return 'Low'
     return 'Info'
+
+
+def _normalize_cve(cve) -> str | None:
+    """Extract a canonical CVE id (CVE-YYYY-NNNN) or None."""
+    if not cve:
+        return None
+    m = re.search(r'CVE-\d{4}-\d{4,7}', str(cve), re.IGNORECASE)
+    return m.group(0).upper() if m else None
 
 
 def _validate_and_normalize(result: dict) -> dict:
@@ -60,7 +68,10 @@ def _validate_and_normalize(result: dict) -> dict:
         v.setdefault('OWASP', 'Unmapped')
         v.setdefault('CWE', 'CWE-000')
         v.setdefault('Evidence', 'See raw output.')
-        
+
+        # Normalize optional CVE identifier (None if not present/invalid)
+        v['CVE'] = _normalize_cve(v.get('CVE'))
+
         normalized.append(v)
     
     return {
@@ -73,7 +84,7 @@ class GeminiAnalyzer:
     def __init__(self):
         if settings.GEMINI_API_KEY:
             self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            self.model_name = "gemini-3-flash-preview"
+            self.model_name = "gemini-2.5-flash"
         else:
             self.client = None
             print("Warning: GEMINI_API_KEY not set. Analysis skipped.", file=sys.stderr)
@@ -218,7 +229,8 @@ Return a JSON object with EXACTLY:
       "Remediation": "Actionable remediation steps",
       "OWASP": "A01-Broken Access Control",
       "CWE": "CWE-200",
-      "Evidence": "Specific log evidence included"
+      "Evidence": "Specific log evidence included",
+      "CVE": "CVE-2024-1234 if a specific CVE is evident, otherwise null"
     }}
   ]
 }}
@@ -228,6 +240,7 @@ STRICT RULES:
 - MUST follow the schema exactly.
 - MUST group similar issues into ONE finding (not duplicates).
 - MUST use OWASP + CWE.
+- SET "CVE" to a specific CVE id only when clearly evidenced (e.g. from Nuclei/searchsploit); otherwise null. NEVER invent a CVE.
 - MUST identify the Tool from the input keys.
 - NO markdown or commentary.
 
@@ -280,3 +293,37 @@ If multiple similar findings exist, CONSOLIDATE them into ONE grouped finding.
             "summary": "AI could not produce valid JSON.",
             "vulnerabilities": []
         }
+
+    # ------------------------------
+    # CTEM M6: GUIDED AGENT DECISION
+    # ------------------------------
+    async def run_agent_decision(self, system_prompt: str, user_prompt: str) -> dict:
+        """Run a constrained planning prompt and return parsed JSON.
+        Reuses the same JSON-mode + retry plumbing as analyze_phase.
+        Raises on total failure so the orchestrator can fall back."""
+        if not self.client:
+            raise RuntimeError("Gemini client not initialized")
+        last_err = None
+        for attempt in range(3):
+            try:
+                response = await self.client.aio.models.generate_content(
+                    model=self.model_name,
+                    contents=user_prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.0,
+                        top_p=1.0,
+                        candidate_count=1,
+                        response_mime_type="application/json",
+                    ),
+                )
+                text = response.text.strip()
+                if text.startswith("```"):
+                    text = text.replace("```json", "").replace("```", "").strip()
+                return json.loads(text)
+            except Exception as e:
+                last_err = e
+                print(f"[Gemini Agent Warning] Attempt {attempt+1} failed: {e}", file=sys.stderr)
+                import asyncio
+                await asyncio.sleep(1)
+        raise RuntimeError(f"Gemini agent decision failed: {last_err}")

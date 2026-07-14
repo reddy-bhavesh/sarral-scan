@@ -45,6 +45,26 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
+      '/ctem': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/schedules': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/ai-tools': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/ai-scans': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/engagements': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

@@ -131,6 +131,13 @@ class ReportGenerator:
             leading=10
         )
 
+    @staticmethod
+    def _rl(text) -> str:
+        """Escape free-text (AI/tool output) for ReportLab's Paragraph mini-markup.
+        Without this, content like '<link ... rel="stylesheet">' or a bare '&' is
+        parsed as markup and raises a paraparser syntax error, crashing the report."""
+        return html.escape(str(text if text is not None else ""), quote=False)
+
     def _create_pie_chart(self, vuln_counts, width=400, height=250):
         """Create a pie chart showing vulnerability distribution."""
         drawing = Drawing(width, height)
@@ -377,7 +384,11 @@ class ReportGenerator:
         canvas.drawString(50, 32, f"Target: {target}")
         canvas.drawCentredString(letter[0]/2, 32, "CONFIDENTIAL")
         canvas.drawRightString(letter[0]-50, 32, f"Page {doc.page}")
-        
+
+        # Attribution line
+        canvas.setFont('Helvetica', 7)
+        canvas.drawCentredString(letter[0]/2, 21, "Created by Scout")
+
         canvas.restoreState()
 
     def generate_report(self, scan_data, scan_results, output_path):
@@ -502,7 +513,7 @@ class ReportGenerator:
         
         # Target info box
         target_data = [
-            [Paragraph(f"<b>{scan_data.target}</b>", ParagraphStyle('Target', fontSize=18, alignment=TA_CENTER, textColor=self.COLORS['primary']))]
+            [Paragraph(f"<b>{self._rl(scan_data.target)}</b>", ParagraphStyle('Target', fontSize=18, alignment=TA_CENTER, textColor=self.COLORS['primary']))]
         ]
         target_table = Table(target_data, colWidths=[400])
         target_table.setStyle(TableStyle([
@@ -630,7 +641,7 @@ class ReportGenerator:
         # --- 1.1 Overview ---
         story.append(Paragraph("1.1 Overview", self.style_h2))
         
-        overview_p1 = f"""<b>{scan_data.target}</b> engaged Scout Security to conduct automated security testing 
+        overview_p1 = f"""<b>{self._rl(scan_data.target)}</b> engaged Scout Security to conduct automated security testing
         against their information environment to provide a practical demonstration of the security controls' 
         effectiveness as well as to provide an estimate of their susceptibility to exploitation and/or data breaches. 
         The test was performed in accordance with Scout Security's Automated Penetration Testing Method."""
@@ -828,9 +839,9 @@ class ReportGenerator:
                     
                 list_data.append([
                     str(i),
-                    Paragraph(finding_name, self.style_small),
+                    Paragraph(self._rl(finding_name), self.style_small),
                     v['Severity'],
-                    v.get('Tool', 'N/A')[:15]
+                    self._rl(v.get('Tool', 'N/A')[:15])
                 ])
             
             list_table = Table(list_data, colWidths=[30, 280, 70, 100], hAlign='LEFT')
@@ -876,7 +887,7 @@ class ReportGenerator:
                 sev = v['Severity']
                 sev_color = self.SEVERITY_COLORS.get(sev, self.COLORS['info'])
                 
-                header_text = f"<b>Finding {i}:</b> {v.get('Vulnerability', v.get('Name', 'Issue'))}"
+                header_text = f"<b>Finding {i}:</b> {self._rl(v.get('Vulnerability', v.get('Name', 'Issue')))}"
                 
                 # Create a table with header on left, badge on right
                 header_badge_data = [[
@@ -910,10 +921,10 @@ class ReportGenerator:
                 refs_text = " | ".join(refs) if refs else "N/A"
                 
                 details_data = [
-                    [Paragraph("<b>Description</b>", self.style_small), Paragraph(desc, self.style_normal)],
-                    [Paragraph("<b>Tool</b>", self.style_small), Paragraph(tool, self.style_normal)],
-                    [Paragraph("<b>References</b>", self.style_small), Paragraph(refs_text, self.style_small)],
-                    [Paragraph("<b>Remediation</b>", self.style_small), Paragraph(remediation, self.style_normal)],
+                    [Paragraph("<b>Description</b>", self.style_small), Paragraph(self._rl(desc), self.style_normal)],
+                    [Paragraph("<b>Tool</b>", self.style_small), Paragraph(self._rl(tool), self.style_normal)],
+                    [Paragraph("<b>References</b>", self.style_small), Paragraph(self._rl(refs_text), self.style_small)],
+                    [Paragraph("<b>Remediation</b>", self.style_small), Paragraph(self._rl(remediation), self.style_normal)],
                 ]
                 
                 # Add evidence if available

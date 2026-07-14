@@ -5,6 +5,7 @@ from app.api.deps import get_db, get_current_user
 from app.models.user import UserResponse
 from app.models.scan import ScanCreate, ScanResponse, DashboardStats, StatItem, ChartDataPoint, VulnDistribution, PaginatedScanResponse
 from app.services.scan_manager import ScanManager
+from app.services.deep_agent.authorization import AuthorizationError
 from datetime import timedelta, datetime
 import json
 import asyncio
@@ -135,6 +136,9 @@ async def create_scan(
         print(f"Creating scan for {scan.target} with phases {scan.phases}")
         scan_manager = ScanManager(db)
         return await scan_manager.create_scan(scan, current_user.id)
+    except AuthorizationError as e:
+        # Deep Agent mode: target not covered by an active engagement (fail-closed).
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         print(f"Error creating scan: {e}")
         import traceback

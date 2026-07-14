@@ -53,10 +53,45 @@ async def lifespan(app: FastAPI):
             logger.info(f"Startup Cleanup: Marked {zombie_scans} zombie scans as Failed.")
     except Exception as e:
         logger.error(f"Startup Cleanup Error: {e}")
-        
+
+    # CTEM M7: start the continuous-monitoring scheduler (recurring scans + KEV refresh)
+    try:
+        from app.services.scheduler import start_scheduler
+        start_scheduler(db)
+        logger.info("Continuous-monitoring scheduler started.")
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
+
     yield
-    await db.disconnect()
-    logger.info("Database disconnected on shutdown.")
+
+    # Shutdown: stop background work BEFORE disconnecting the DB so tasks don't
+    # spam reconnect errors against a closing query engine.
+    try:
+        from app.services.scheduler import stop_scheduler
+        await stop_scheduler()
+    except Exception as e:
+        logger.error(f"Failed to stop scheduler: {e}")
+
+    try:
+        from app.services.scan_manager import ScanManager
+        active = list(ScanManager._active_scans.items())
+        for scan_id, task in active:
+            task.cancel()
+        for scan_id, task in active:
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        if active:
+            logger.info(f"Cancelled {len(active)} in-flight scan(s) on shutdown.")
+    except Exception as e:
+        logger.error(f"Failed to cancel active scans: {e}")
+
+    try:
+        await db.disconnect()
+        logger.info("Database disconnected on shutdown.")
+    except Exception as e:
+        logger.error(f"Error disconnecting DB on shutdown: {e}")
 
 app = FastAPI(title="Pentest Web App API", version="1.0.0", lifespan=lifespan)
 
@@ -84,6 +119,16 @@ from app.api import breaches
 app.include_router(breaches.router, prefix="/breaches", tags=["breaches"])
 from app.api import webintel
 app.include_router(webintel.router, prefix="/api/webintel", tags=["webintel"])
+from app.api import ctem
+app.include_router(ctem.router, prefix="/ctem", tags=["ctem"])
+from app.api import schedules
+app.include_router(schedules.router, prefix="/schedules", tags=["schedules"])
+from app.api import aitools
+app.include_router(aitools.router, prefix="/ai-tools", tags=["ai-tools"])
+from app.api import ai_scans
+app.include_router(ai_scans.router, prefix="/ai-scans", tags=["ai-scans"])
+from app.api import engagements
+app.include_router(engagements.router, prefix="/engagements", tags=["engagements"])
 
 # Ensure reports directory exists
 os.makedirs("reports", exist_ok=True) # Ensures reports directory exists

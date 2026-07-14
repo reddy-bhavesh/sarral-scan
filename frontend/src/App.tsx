@@ -14,6 +14,14 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import BreachChecker from './pages/BreachChecker';
 import WebIntelPage from './pages/WebIntelPage';
+import AttackSurface from './pages/AttackSurface';
+import Exposures from './pages/Exposures';
+import Remediation from './pages/Remediation';
+import Schedules from './pages/Schedules';
+import AiToolsRegistry from './pages/AiToolsRegistry';
+import AiScanView from './pages/AiScanView';
+import DeepScanView from './pages/DeepScanView';
+import Engagements from './pages/Engagements';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -30,6 +38,14 @@ const AnimatedRoutes = () => {
               <Route path="/scan/new" element={<NewScan />} />
               <Route path="/scan/history" element={<History />} />
               <Route path="/scan/:id" element={<ScanDetails />} />
+              <Route path="/ai-scan/:id" element={<AiScanView />} />
+              <Route path="/deep-scan/:id" element={<DeepScanView />} />
+              <Route path="/ai-tools" element={<AiToolsRegistry />} />
+              <Route path="/engagements" element={<Engagements />} />
+              <Route path="/attack-surface" element={<AttackSurface />} />
+              <Route path="/exposures" element={<Exposures />} />
+              <Route path="/remediation" element={<Remediation />} />
+              <Route path="/schedules" element={<Schedules />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/breach-checker" element={<BreachChecker />} />

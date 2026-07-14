@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
-import { 
-    ArrowLeft, Download, Shield, AlertTriangle, CheckCircle, 
+import {
+    ArrowLeft, Download, Shield, AlertTriangle, CheckCircle,
     Clock, FileText, Terminal, Activity, Globe, Copy, Square,
-    Server, MapPin, Database, Bot 
+    Server, MapPin, Database, Bot, Cpu, SkipForward, ArrowUp
 } from 'lucide-react';
 import api from '../api/axios';
 import WebIntelligence from '../components/WebIntelligence';
 import Modal from '../components/Modal';
+import ScrollText from '../components/ScrollText';
 import { severity } from '../theme/palette';
 
 const containerVariants = {
@@ -52,7 +53,14 @@ const ScanDetails = () => {
     const [activeTab, setActiveTab] = useState('summary');
     const [direction, setDirection] = useState(0);
 
-    const tabOrder = ['summary', 'findings', 'web-intel', 'logs', 'report'];
+    const tabOrder = ['summary', 'findings', 'agent', 'web-intel', 'logs', 'report'];
+    const [agentDecisions, setAgentDecisions] = useState<any[]>([]);
+
+    // Raw Logs navigation: jump to the currently-running tool / back to top.
+    const pageTopRef = useRef<HTMLDivElement>(null);
+    const runningToolRef = useRef<HTMLDivElement>(null);
+    const scrollToTop = () => pageTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const scrollToRunning = () => runningToolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     const handleTabChange = (newTab: string) => {
         const oldIndex = tabOrder.indexOf(activeTab);
@@ -98,11 +106,23 @@ ${finding.Evidence || 'N/A'}
         };
 
         fetchScan();
-        
+
+        // CTEM M6: fetch agent reasoning timeline (agentic scans only)
+        const fetchAgent = async () => {
+            try {
+                const res = await api.get(`/ctem/scans/${id}/agent-decisions`);
+                setAgentDecisions(res.data || []);
+            } catch (e) {
+                // non-fatal: classic scans / endpoint absence
+            }
+        };
+        fetchAgent();
+
         // Poll for updates if scan is running (Every 5 seconds as requested)
         const interval = setInterval(() => {
             if (scan && scan.status === 'Running') {
                 fetchScan();
+                fetchAgent();  // refresh the agent timeline live during agentic scans
             }
         }, 5000);
 
@@ -337,6 +357,8 @@ ${finding.Evidence || 'N/A'}
 
     return (
         <PageTransition className="space-y-6">
+            {/* Scroll anchor for the "back to top" button */}
+            <div ref={pageTopRef} />
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -481,109 +503,112 @@ ${finding.Evidence || 'N/A'}
                             <div className="p-3 bg-blue-500/10 rounded-xl">
                                 <Globe className="w-6 h-6 text-blue-500" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-xs text-gray-500 uppercase font-medium mb-1">Domain</p>
-                                <p className="text-lg text-gray-900 dark:text-white font-bold tracking-wide">{scan.target}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">
+                                <ScrollText className="text-lg text-gray-900 dark:text-white font-bold tracking-wide">{scan.target}</ScrollText>
+                                <div className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">
                                     {(() => {
                                         const nslookup = scan.results?.find((r: any) => r.tool === 'NSLookup');
+                                        let ip = 'Scanning...';
                                         if (nslookup?.output_json) {
-                                            try {
-                                                const data = JSON.parse(nslookup.output_json);
-                                                return data.ip || 'Scanning...';
-                                            } catch (e) {}
+                                            try { ip = JSON.parse(nslookup.output_json).ip || ip; } catch (e) {}
                                         }
-                                        const ipMatch = nslookup?.raw_output?.match(/Address:\s*(\d+\.\d+\.\d+\.\d+)/);
-                                        return ipMatch ? ipMatch[1] : 'Scanning...';
+                                        if (ip === 'Scanning...') {
+                                            // First "Address:" is the resolver; the target IP is the last.
+                                            const addrs = [...((nslookup?.raw_output || '').matchAll(/Address:\s*(\d+\.\d+\.\d+\.\d+)/g))];
+                                            if (addrs.length) ip = addrs[addrs.length - 1][1];
+                                        }
+                                        return <ScrollText>{ip}</ScrollText>;
                                     })()}
-                                </p>
+                                </div>
                             </div>
                         </div>
 
                         {/* Hosting & Location Grid */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="flex items-center gap-3">
-                                <Server className="w-4 h-4 text-gray-500" />
-                                <div>
+                            <div className="flex items-center gap-3 min-w-0">
+                                <Server className="w-4 h-4 text-gray-500 shrink-0" />
+                                <div className="min-w-0">
                                     <p className="text-xs text-gray-500 uppercase font-medium">Hosting</p>
-                                    <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                    <div className="text-sm text-gray-900 dark:text-white font-medium">
                                         {(() => {
                                             const whois = scan.results?.find((r: any) => r.tool === 'Whois');
                                             const orgMatch = whois?.raw_output?.match(/Registrar:\s*(.*)/i) || whois?.raw_output?.match(/OrgName:\s*(.*)/i);
-                                            return orgMatch ? orgMatch[1].trim().substring(0, 15) + (orgMatch[1].length > 15 ? '...' : '') : 'Unknown';
+                                            return <ScrollText>{orgMatch ? orgMatch[1].trim() : 'Unknown'}</ScrollText>;
                                         })()}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <MapPin className="w-4 h-4 text-gray-500" />
-                                <div>
+                            <div className="flex items-center gap-3 min-w-0">
+                                <MapPin className="w-4 h-4 text-gray-500 shrink-0" />
+                                <div className="min-w-0">
                                     <p className="text-xs text-gray-500 uppercase font-medium">Location</p>
-                                    <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                    <div className="text-sm text-gray-900 dark:text-white font-medium">
                                         {(() => {
                                             const whois = scan.results?.find((r: any) => r.tool === 'Whois');
                                             const countryMatch = whois?.raw_output?.match(/Country:\s*(.*)/i);
                                             const cityMatch = whois?.raw_output?.match(/City:\s*(.*)/i);
-                                            if (cityMatch && countryMatch) return `${cityMatch[1].trim()}, ${countryMatch[1].trim()}`;
-                                            return countryMatch ? countryMatch[1].trim() : 'Unknown';
+                                            const loc = (cityMatch && countryMatch) ? `${cityMatch[1].trim()}, ${countryMatch[1].trim()}`
+                                                : countryMatch ? countryMatch[1].trim() : 'Unknown';
+                                            return <ScrollText>{loc}</ScrollText>;
                                         })()}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* SSL/TLS Status */}
-                        <div className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-xl p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Shield className="w-4 h-4 text-green-600 dark:text-green-500" />
-                                <span className="text-green-700 dark:text-green-500 font-bold text-sm">SSL/TLS Enabled</span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                                <span>Version: <span className="text-gray-700 dark:text-gray-300">
-                                    {(() => {
-                                        const sslscan = scan.results?.find((r: any) => r.tool === 'SSLScan');
-                                        if (sslscan?.raw_output) {
-                                            // Look for accepted TLS versions (case insensitive, handle potential extra spaces)
-                                            const tlsVersions = sslscan.raw_output.match(/Accepted\s+(TLSv\d\.\d|SSLv\d)/gi);
-                                            if (tlsVersions && tlsVersions.length > 0) {
-                                                // Get the highest version
-                                                // Extract just the version part (e.g., "TLSv1.3")
-                                                const versions = tlsVersions.map((v: string) => {
-                                                    const match = v.match(/(TLSv\d\.\d|SSLv\d)/i);
-                                                    return match ? match[1] : '';
-                                                }).filter(Boolean).sort();
-                                                return versions[versions.length - 1];
-                                            }
-                                        }
-                                        // Fallback to WhatWeb
-                                        const whatweb = scan.results?.find((r: any) => r.tool === 'WhatWeb');
-                                        if (whatweb?.raw_output) {
-                                            if (whatweb.raw_output.includes('https://')) return 'TLS Enabled';
-                                        }
-                                        return 'Unknown';
-                                    })()}
-                                </span></span>
-                                <span>Issuer: <span className="text-gray-700 dark:text-gray-300">
-                                    {(() => {
-                                        const sslscan = scan.results?.find((r: any) => r.tool === 'SSLScan');
-                                        if (sslscan?.raw_output) {
-                                            const issuerMatch = sslscan.raw_output.match(/Issuer:\s*(.*)/i);
-                                            if (issuerMatch) {
-                                                const issuer = issuerMatch[1].trim();
-                                                // Map common intermediate certs to friendly names
-                                                if (issuer.match(/Let's Encrypt|R3|E[5-9]|E1/i)) return "Let's Encrypt";
-                                                if (issuer.match(/DigiCert/i)) return "DigiCert";
-                                                if (issuer.match(/Cloudflare/i)) return "Cloudflare";
-                                                if (issuer.match(/Google Trust Services/i)) return "Google";
-                                                if (issuer.match(/Sectigo/i)) return "Sectigo";
-                                                return issuer.substring(0, 20) + (issuer.length > 20 ? '...' : '');
-                                            }
-                                        }
-                                        return 'Unknown';
-                                    })()}
-                                </span></span>
-                            </div>
-                        </div>
+                        {/* SSL/TLS Status — derived from actual scan output, not assumed */}
+                        {(() => {
+                            const sslscan = scan.results?.find((r: any) => r.tool === 'SSLScan');
+                            const whatweb = scan.results?.find((r: any) => r.tool === 'WhatWeb');
+
+                            let version = 'Unknown';
+                            if (sslscan?.raw_output) {
+                                const tlsVersions = sslscan.raw_output.match(/Accepted\s+(TLSv\d\.\d|SSLv\d)/gi);
+                                if (tlsVersions && tlsVersions.length > 0) {
+                                    const versions = tlsVersions.map((v: string) => {
+                                        const m = v.match(/(TLSv\d\.\d|SSLv\d)/i);
+                                        return m ? m[1] : '';
+                                    }).filter(Boolean).sort();
+                                    version = versions[versions.length - 1];
+                                }
+                            }
+                            if (version === 'Unknown' && whatweb?.raw_output?.includes('https://')) version = 'TLS Enabled';
+                            const tlsDetected = version !== 'Unknown';
+
+                            let issuer = 'Unknown';
+                            if (sslscan?.raw_output) {
+                                const issuerMatch = sslscan.raw_output.match(/Issuer:\s*(.*)/i);
+                                if (issuerMatch) {
+                                    const iss = issuerMatch[1].trim();
+                                    if (iss.match(/Let's Encrypt|R3|E[5-9]|E1/i)) issuer = "Let's Encrypt";
+                                    else if (iss.match(/DigiCert/i)) issuer = "DigiCert";
+                                    else if (iss.match(/Cloudflare/i)) issuer = "Cloudflare";
+                                    else if (iss.match(/Google Trust Services/i)) issuer = "Google";
+                                    else if (iss.match(/Sectigo/i)) issuer = "Sectigo";
+                                    else issuer = iss.substring(0, 20) + (iss.length > 20 ? '...' : '');
+                                }
+                            }
+
+                            return (
+                                <div className={`rounded-xl p-4 border ${tlsDetected
+                                    ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20'
+                                    : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Shield className={`w-4 h-4 ${tlsDetected ? 'text-green-600 dark:text-green-500' : 'text-gray-400'}`} />
+                                        <span className={`font-bold text-sm ${tlsDetected ? 'text-green-700 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                            {tlsDetected ? 'SSL/TLS Enabled' : 'SSL/TLS Not Detected'}
+                                        </span>
+                                    </div>
+                                    {tlsDetected && (
+                                        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                            <span>Version: <span className="text-gray-700 dark:text-gray-300">{version}</span></span>
+                                            <span>Issuer: <span className="text-gray-700 dark:text-gray-300">{issuer}</span></span>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {/* Footer Stats Grid */}
                         <div className="grid grid-cols-3 gap-3 pt-2">
@@ -659,19 +684,70 @@ ${finding.Evidence || 'N/A'}
                                 </p>
                                 <p className="text-[10px] text-gray-500 uppercase">Response</p>
                             </div>
-                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-800">
-                                <Server className="w-5 h-5 text-orange-500 mx-auto mb-2" />
-                                <p className="text-xl font-bold text-gray-900 dark:text-white">
-                                    {(() => {
-                                        const nslookup = scan.results?.find((r: any) => r.tool === 'NSLookup');
-                                        if (!nslookup?.raw_output) return 0;
-                                        // Count lines with "Address" or "Name"
-                                        const matches = nslookup.raw_output.match(/(Address|Name):/g);
-                                        return matches ? Math.floor(matches.length / 2) + 2 : 0;
-                                    })()}
-                                </p>
-                                <p className="text-[10px] text-gray-500 uppercase">DNS Records</p>
-                            </div>
+                            {(() => {
+                                // WAF detection from WhatWaf + WafW00f. The two tools format names
+                                // differently, so each is parsed on its own terms, and generic /
+                                // descriptive phrases are filtered so we only show real vendor names.
+                                const whatwaf = scan.results?.find((r: any) => r.tool === 'WhatWaf');
+                                const wafw00f = scan.results?.find((r: any) => r.tool === 'WafW00f');
+
+                                // A cleaned token is "generic" (not a real vendor) if empty, a stop-word,
+                                // or made of descriptor words rather than a product/vendor name.
+                                const isGeneric = (s: string) =>
+                                    !s ||
+                                    /^(a|an|the|some|unknown)$/i.test(s) ||
+                                    /(web application firewall|generic|security solution|some sort|protection|detected|seems|behind)/i.test(s);
+
+                                const names: string[] = [];
+                                const add = (n: string) => {
+                                    const c = (n || '').trim().replace(/[.\s]+$/, '');
+                                    if (isGeneric(c)) return;
+                                    if (!names.some((x) => x.toLowerCase() === c.toLowerCase())) names.push(c);
+                                };
+
+                                // WhatWaf: "<Vendor> Web Application Firewall (<ShortName>)" — name is the parenthetical.
+                                if (whatwaf?.raw_output) {
+                                    for (const m of whatwaf.raw_output.matchAll(/\[FIREWALL\]\s*(.+)/gi)) {
+                                        const line = m[1].trim();
+                                        const paren = line.match(/\(([^)]+)\)\s*$/);
+                                        add(paren ? paren[1] : line.replace(/\s*(Web Application Firewall|Generic Protection|Protection)\b.*$/i, ''));
+                                    }
+                                }
+                                // WafW00f: "is behind <Name> (<Vendor Inc.>) WAF" — name is BEFORE the parenthesis.
+                                if (wafw00f?.raw_output) {
+                                    for (const m of wafw00f.raw_output.matchAll(/is behind\s+(.+?)\s+WAF\b/gi)) {
+                                        add(m[1].replace(/\s*\([^)]*\)\s*$/, ''));
+                                    }
+                                }
+
+                                const ran = !!(whatwaf?.raw_output || wafw00f?.raw_output);
+                                const genericHit = ran && names.length === 0 && (
+                                    /seems to be behind a waf|behind a waf or|is behind/i.test(wafw00f?.raw_output || '') ||
+                                    /\[firewall\]/i.test(whatwaf?.raw_output || '')
+                                );
+                                const explicitNone = ran && names.length === 0 && !genericHit && (
+                                    /no waf/i.test(wafw00f?.raw_output || '') ||
+                                    /(no firewall|unprotected)/i.test(whatwaf?.raw_output || '')
+                                );
+
+                                const detected = names.length > 0 || genericHit;
+                                const value = names.length > 0
+                                    ? names[0] + (names.length > 1 ? ` +${names.length - 1}` : '')
+                                    : genericHit ? 'Detected'
+                                    : explicitNone ? 'None'
+                                    : scan.status === 'Running' ? 'Scanning...'
+                                    : 'N/A';
+                                return (
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-800">
+                                        <Shield className={`w-5 h-5 mx-auto mb-2 ${detected ? 'text-amber-500' : 'text-gray-400'}`} />
+                                        <p className={`text-base font-bold truncate ${detected ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}
+                                           title={names.join(', ')}>
+                                            {value}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 uppercase">WAF</p>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -775,6 +851,15 @@ ${finding.Evidence || 'N/A'}
                         <Shield className="w-4 h-4" />
                         Findings ({allFindings.length})
                     </button>
+                    {(scan.mode === 'agentic' || agentDecisions.length > 0) && (
+                        <button
+                            className={`py-3 px-6 text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-colors ${activeTab === 'agent' ? 'text-blue-600 dark:text-white border-b-2 border-blue-600 dark:border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            onClick={() => handleTabChange('agent')}
+                        >
+                            <Cpu className="w-4 h-4" />
+                            Agent ({agentDecisions.length})
+                        </button>
+                    )}
                     {(scan.results?.some((r: any) => r.tool === 'WebScraperRecon' || r.tool === 'WebScraperRecon (Active)')) && (
                         <button 
                             className={`py-3 px-6 text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-colors ${activeTab === 'web-intel' ? 'text-blue-600 dark:text-white border-b-2 border-blue-600 dark:border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
@@ -962,32 +1047,33 @@ ${finding.Evidence || 'N/A'}
                                                         <div className="mb-6">
                                                             <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Affected Assets</h5>
                                                             <div className="flex flex-wrap gap-2">
-                                                                <span className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md text-sm text-gray-700 dark:text-gray-300 font-mono border border-gray-200 dark:border-gray-700 flex items-center gap-2">
-                                                                    {scan.target}
-                                                                    <button 
-                                                                        className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                                                                        onClick={() => {
-                                                                            navigator.clipboard.writeText(scan.target);
-                                                                            // Optional: Add toast or visual feedback here
-                                                                        }}
-                                                                        title="Copy to clipboard"
-                                                                    >
-                                                                        <Copy className="w-3 h-3" />
-                                                                    </button>
-                                                                </span>
-                                                                {/* Mock additional assets if needed */}
-                                                                {finding.Description?.includes('subdomain') && (
-                                                                    <span className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md text-sm text-gray-700 dark:text-gray-300 font-mono border border-gray-200 dark:border-gray-700 flex items-center gap-2">
-                                                                        www.{scan.target}
-                                                                        <button 
-                                                                            className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                                                                            onClick={() => navigator.clipboard.writeText(`www.${scan.target}`)}
-                                                                            title="Copy to clipboard"
-                                                                        >
-                                                                            <Copy className="w-3 h-3" />
-                                                                        </button>
-                                                                    </span>
-                                                                )}
+                                                                {(() => {
+                                                                    // Derive the real affected hosts from the finding text: any
+                                                                    // hostname under the scan's root domain mentioned in the
+                                                                    // description/evidence. Falls back to the root target.
+                                                                    const root = String(scan.target || '')
+                                                                        .replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:.*$/, '').toLowerCase();
+                                                                    const text = `${finding.Description || ''} ${finding.Evidence || ''} ${finding.AffectedAssets || ''}`.toLowerCase();
+                                                                    let hosts: string[] = [root];
+                                                                    if (root) {
+                                                                        const esc = root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                                                        const re = new RegExp(`([a-z0-9_-]+\\.)*${esc}`, 'g');
+                                                                        const found = Array.from(new Set(text.match(re) || []));
+                                                                        if (found.length) hosts = found;
+                                                                    }
+                                                                    return hosts.map((h) => (
+                                                                        <span key={h} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md text-sm text-gray-700 dark:text-gray-300 font-mono border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                                                                            {h}
+                                                                            <button
+                                                                                className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                                                                                onClick={() => navigator.clipboard.writeText(h)}
+                                                                                title="Copy to clipboard"
+                                                                            >
+                                                                                <Copy className="w-3 h-3" />
+                                                                            </button>
+                                                                        </span>
+                                                                    ));
+                                                                })()}
                                                             </div>
                                                         </div>
 
@@ -1284,7 +1370,7 @@ ${finding.Evidence || 'N/A'}
                                                     const isRunning = result.status === 'Running';
 
                                                     return (
-                                                        <div key={i} className="bg-white dark:bg-gray-950/30">
+                                                        <div key={i} ref={isRunning ? runningToolRef : undefined} className="bg-white dark:bg-gray-950/30">
                                                             <div className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className={`w-2 h-2 rounded-full ${
@@ -1324,13 +1410,19 @@ ${finding.Evidence || 'N/A'}
                                                                                 <div key={key} className="mb-2 last:mb-0">
                                                                                     <div className="text-[10px] font-bold text-blue-600 dark:text-blue-500/80 uppercase mb-0.5">{key}</div>
                                                                                     <pre className="font-mono text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                                                                                        {Array.isArray(value) ? (value.length ? value.map(v => typeof v === 'object' ? JSON.stringify(v) : v).join('\n') : 'No results') : String(value)}
+                                                                                        {Array.isArray(value)
+                                                                                            ? (value.length ? value.map(v => typeof v === 'object' ? JSON.stringify(v) : v).join('\n') : 'No results')
+                                                                                            : (value && typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value))}
                                                                                     </pre>
                                                                                 </div>
                                                                             ))
                                                                         ) : (
                                                                             <pre className="font-mono text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                                                                                {String(parsedOutput || (result.raw_output ? result.raw_output : "No output generated."))}
+                                                                                {(result.raw_output && result.raw_output.trim())
+                                                                                    ? result.raw_output
+                                                                                    : (parsedOutput && typeof parsedOutput === 'object')
+                                                                                        ? JSON.stringify(parsedOutput, null, 2)
+                                                                                        : (parsedOutput != null && String(parsedOutput).trim() ? String(parsedOutput) : "No output generated.")}
                                                                             </pre>
                                                                         )}
                                                                     </div>
@@ -1373,8 +1465,93 @@ ${finding.Evidence || 'N/A'}
                             })()} />
                         </motion.div>
                     )}
+
+                    {activeTab === 'agent' && (
+                        <motion.div
+                            key="agent"
+                            variants={slideVariants}
+                            custom={direction}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                        >
+                            <div className="flex items-center gap-2 mb-4">
+                                <Cpu className="w-5 h-5 text-blue-500" />
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Agent Decisions</h3>
+                            </div>
+                            {agentDecisions.length === 0 ? (
+                                <p className="text-sm text-gray-500">
+                                    No agent decisions recorded. This appears when a scan is launched in <span className="font-medium">Agentic</span> mode.
+                                </p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {agentDecisions.map((d: any) => {
+                                        let selected: string[] = [];
+                                        let skipped: any[] = [];
+                                        try { selected = JSON.parse(d.selectedTools || '[]'); } catch { /* noop */ }
+                                        try { skipped = JSON.parse(d.skippedTools || '[]'); } catch { /* noop */ }
+                                        return (
+                                            <div key={d.id} className="border border-gray-200 dark:border-gray-800 rounded-xl p-5 bg-gray-50 dark:bg-gray-950">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">Step {d.stepIndex}</span>
+                                                        <span className="text-sm font-medium text-gray-900 dark:text-white">{d.afterPhase}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                        {d.confidence != null && <span>confidence {Math.round(d.confidence * 100)}%</span>}
+                                                        {d.modelUsed && <span className="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800">{d.modelUsed}</span>}
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 italic">{d.reasoning}</p>
+                                                <div className="flex flex-wrap gap-2 mb-2">
+                                                    {selected.map((s) => (
+                                                        <span key={s} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
+                                                            <CheckCircle className="w-3 h-3" />{s}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                {skipped.length > 0 && (
+                                                    <div className="space-y-1 mt-2">
+                                                        {skipped.map((s: any, i: number) => (
+                                                            <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
+                                                                <SkipForward className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                                                <span><span className="font-medium text-gray-600 dark:text-gray-400">{s.name}</span> — {s.reason}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
                 </div>
             </div>
+
+            {/* Raw Logs floating navigation */}
+            {activeTab === 'logs' && (
+                <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-2">
+                    {scan.results?.some((r: any) => r.status === 'Running' && r.tool !== 'AI_PHASE_SUMMARY') && (
+                        <button
+                            onClick={scrollToRunning}
+                            title="Jump to the currently running tool"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-lg transition-colors"
+                        >
+                            <Activity className="w-4 h-4 animate-pulse" /> Running tool
+                        </button>
+                    )}
+                    <button
+                        onClick={scrollToTop}
+                        title="Back to top"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                        <ArrowUp className="w-4 h-4" /> Top
+                    </button>
+                </div>
+            )}
         </PageTransition>
     );
 };
